@@ -9,7 +9,16 @@ Future<void> main() async {
   // Permite arrancar la app incluso si Firebase aun no esta configurado.
   try {
     await Firebase.initializeApp();
-  } catch (_) {}
+  } catch (_) {
+    await Firebase.initializeApp(
+      options: const FirebaseOptions(
+        apiKey: 'test-api-key',
+        appId: 'test-app-id',
+        messagingSenderId: 'test-sender-id',
+        projectId: 'test-project-id',
+      ),
+    );
+  }
 
   runApp(const MyApp());
 }
