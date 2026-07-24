@@ -31,15 +31,20 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final auth = AuthService();
+  State<AuthGate> createState() => _AuthGateState();
+}
 
+class _AuthGateState extends State<AuthGate> {
+  final AuthService _auth = AuthService();
+
+  @override
+  Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: auth.authStateChanges,
+      stream: _auth.authStateChanges,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -48,7 +53,7 @@ class AuthGate extends StatelessWidget {
         }
 
         if (snapshot.hasData) {
-          return HomeScreen(authService: auth);
+          return HomeScreen(authService: _auth);
         }
 
         return const LoginScreen();
