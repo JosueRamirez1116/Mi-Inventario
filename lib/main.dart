@@ -34,15 +34,20 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final auth = AuthService();
+  State<AuthGate> createState() => _AuthGateState();
+}
 
+class _AuthGateState extends State<AuthGate> {
+  final AuthService _auth = AuthService();
+
+  @override
+  Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: auth.authStateChanges,
+      stream: _auth.authStateChanges,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -51,7 +56,7 @@ class AuthGate extends StatelessWidget {
         }
 
         if (snapshot.hasData) {
-          return HomeScreen(authService: auth);
+          return HomeScreen(authService: _auth);
         }
 
         return const LoginScreen();
@@ -68,6 +73,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final email = authService.usuarioActual?.email ?? 'Usuario';
+    final uid = authService.usuarioActual?.uid ?? 'default';
 
     return Scaffold(
       appBar: AppBar(
@@ -80,7 +86,34 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(child: Text('Sesion iniciada: $email')),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.inventory_2_outlined, size: 72),
+              const SizedBox(height: 16),
+              Text(
+                'Sesion iniciada: $email',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CategoriaScreen(negocioId: uid),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.category),
+                label: const Text('Gestionar categorias'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
