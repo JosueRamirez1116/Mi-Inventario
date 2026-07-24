@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:mi_inventario/auth_service.dart';
+import 'package:mi_inventario/auth/services/auth_service.dart';
 
 class RegistroScreen extends StatefulWidget {
   const RegistroScreen({super.key});
