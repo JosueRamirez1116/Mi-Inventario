@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mi_inventario/auth_service.dart';
 import 'package:mi_inventario/login_screen.dart';
+import 'package:mi_inventario/view/categoria_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
@@ -73,6 +74,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final email = authService.usuarioActual?.email ?? 'Usuario';
+    final uid = authService.usuarioActual?.uid ?? 'default';
 
     return Scaffold(
       appBar: AppBar(
@@ -85,7 +87,34 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(child: Text('Sesion iniciada: $email')),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.inventory_2_outlined, size: 72),
+              const SizedBox(height: 16),
+              Text(
+                'Sesion iniciada: $email',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CategoriaScreen(negocioId: uid),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.category),
+                label: const Text('Gestionar categorias'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

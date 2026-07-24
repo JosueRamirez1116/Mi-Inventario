@@ -32,6 +32,24 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "cloud_firestore",
+      "rootUri": "file:///C:/Users/bueso/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore-6.7.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "cloud_firestore_platform_interface",
+      "rootUri": "file:///C:/Users/bueso/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore_platform_interface-8.0.5",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "cloud_firestore_web",
+      "rootUri": "file:///C:/Users/bueso/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore_web-5.7.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
       "name": "collection",
       "rootUri": "file:///C:/Users/bueso/AppData/Local/Pub/Cache/hosted/pub.dev/collection-1.19.1",
       "packageUri": "lib/",
