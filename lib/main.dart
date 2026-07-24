@@ -1,24 +1,18 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:mi_inventario/auth_service.dart';
 import 'package:mi_inventario/login_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Permite arrancar la app incluso si Firebase aun no esta configurado.
   try {
-    await Firebase.initializeApp();
-  } catch (_) {
     await Firebase.initializeApp(
-      options: const FirebaseOptions(
-        apiKey: 'test-api-key',
-        appId: 'test-app-id',
-        messagingSenderId: 'test-sender-id',
-        projectId: 'test-project-id',
-      ),
+      options: DefaultFirebaseOptions.currentPlatform,
     );
-  }
+  } catch (_) {}
 
   runApp(const MyApp());
 }
