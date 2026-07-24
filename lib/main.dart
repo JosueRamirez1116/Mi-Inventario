@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:mi_inventario/auth_service.dart';
-import 'package:mi_inventario/login_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:mi_inventario/auth/screens/login_screen.dart';
+import 'package:mi_inventario/auth/services/auth_service.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
