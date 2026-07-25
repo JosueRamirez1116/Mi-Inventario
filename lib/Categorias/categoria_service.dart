@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../Categorias/categoria_model.dart';
+import 'categoria_model.dart';
 
 class CategoriaService {
   final CollectionReference _categoriasRef =

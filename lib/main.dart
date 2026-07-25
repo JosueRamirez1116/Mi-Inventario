@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+<<<<<<< Updated upstream
+=======
+import 'package:mi_inventario/auth_service.dart';
+import 'package:mi_inventario/login_screen.dart';
+import 'package:mi_inventario/Categorias/categoria_screen.dart';
+>>>>>>> Stashed changes
 import 'package:firebase_core/firebase_core.dart';
 import 'package:get/get.dart';
 import 'package:mi_inventario/auth/services/auth_service.dart';
