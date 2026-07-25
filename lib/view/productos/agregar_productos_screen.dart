@@ -34,7 +34,7 @@ class AgregarProductosScreen extends GetView<ProductosController> {
         labelStyle: fieldTextStyle,
         helperStyle: fieldTextStyle.copyWith(
           fontSize: 10,
-          color: fieldTextColor.withOpacity(0.7),
+          color: fieldTextColor.withAlpha((0.7 * 255).round()),
         ),
         filled: true,
         fillColor: fieldFillColor,
@@ -44,7 +44,7 @@ class AgregarProductosScreen extends GetView<ProductosController> {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: fieldTextColor.withOpacity(0.15)),
+          borderSide: BorderSide(color: fieldTextColor.withAlpha((0.15 * 255).round())),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),

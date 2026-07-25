@@ -31,6 +31,10 @@ Thumbs.db
 
 # Android/Gradle local machine settings
 android/local.properties
+android/.gradle/
+
+# Flutter generated files
+.metadata
 
 # iOS/macOS CocoaPods local files
 **/Pods/
@@ -38,3 +42,9 @@ android/local.properties
 **/Flutter/ephemeral/
 **/Flutter/Generated.xcconfig
 **/Flutter/flutter_export_environment.sh
+
+# Platform-specific generated Flutter plugin files
+ios/Flutter/
+macos/Flutter/
+linux/flutter/
+windows/flutter/
