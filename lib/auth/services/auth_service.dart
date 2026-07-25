@@ -31,8 +31,8 @@ class AuthService {
     );
   }
 
-  Future<UserCredential> iniciarSesion(String email, String password) {
-    return _auth.signInWithEmailAndPassword(email: email, password: password);
+  Future<UserCredential>? iniciarSesion(String email, String password) {
+    return _auth?.signInWithEmailAndPassword(email: email, password: password);
   }
 
   Future<void> cerrarSesion() {
