@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:mi_inventario/model/categoria_model.dart';
-import 'package:mi_inventario/categoria/categoria_service.dart';
+import 'package:mi_inventario/Categorias/categoria_model.dart';
+import 'package:mi_inventario/Categorias/categoria_service.dart';
 
 class CategoriaScreen extends StatefulWidget {
   final String negocioId;
