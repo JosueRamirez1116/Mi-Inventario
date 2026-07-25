@@ -1,2 +1,2 @@
-export 'categoria_screen.dart';
-export 'categoria_service.dart';
+export '../categoria/categoria_screen.dart';
+export '../categoria/categoria_service.dart';
