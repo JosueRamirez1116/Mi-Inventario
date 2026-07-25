@@ -1,4 +1,6 @@
 
+import 'package:flutter/material.dart';
+
 class DashboardModel {
   final String titulo;
   final IconData icono;
