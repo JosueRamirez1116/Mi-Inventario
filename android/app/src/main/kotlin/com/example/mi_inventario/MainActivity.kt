@@ -1,4 +1,4 @@
-package com.example.listafirebase
+package com.example.mi_inventario
 
 import io.flutter.embedding.android.FlutterActivity
 
