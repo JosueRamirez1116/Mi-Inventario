@@ -5,7 +5,6 @@ import 'package:mi_inventario/auth/services/auth_service.dart';
 import 'package:mi_inventario/controller/productos_controller.dart';
 import 'package:mi_inventario/login/login_screen.dart';
 import 'package:mi_inventario/view/dashboard_screen.dart';
-import 'package:mi_inventario/view/productos/agregar_productos_screen.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
