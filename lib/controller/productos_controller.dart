@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mi_inventario/model/productos_model.dart';
 
-
 /// Controlador de la pantalla "Agregar producto".
 ///
 /// Maneja el formulario, la validación y el guardado del producto
@@ -74,6 +73,8 @@ class ProductosController extends GetxController {
         'Producto agregado',
         'El producto se guardó correctamente',
         snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF059669),
+        colorText: Colors.white,
       );
     } catch (error) {
       Get.snackbar(

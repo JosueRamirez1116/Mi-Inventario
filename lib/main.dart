@@ -64,8 +64,8 @@ class _AuthGateState extends State<AuthGate> {
         if (snapshot.hasData) {
           return HomeScreen(authService: _auth);
         }
-        //return LoginScreen();
-        return const AgregarProductosScreen();
+        return LoginScreen();
+        //return const AgregarProductosScreen();
       },
     );
   }

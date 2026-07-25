@@ -8,150 +8,280 @@ class AgregarProductosScreen extends GetView<ProductosController> {
 
   @override
   Widget build(BuildContext context) {
+    const appBarColor = Color(0xFF4338CA);
+    const fieldTextColor = Color(0xFF1E1B2E);
+    const fieldFillColor = Color(0xFFF5F6FA);
+
+    final fieldTextStyle = TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w400,
+      color: fieldTextColor,
+    );
+
+    final sectionTitleStyle = TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.w700,
+      color: fieldTextColor,
+    );
+
+    InputDecoration inputDecoration({
+      required String labelText,
+      String? helperText,
+    }) {
+      return InputDecoration(
+        labelText: labelText,
+        helperText: helperText,
+        labelStyle: fieldTextStyle,
+        helperStyle: fieldTextStyle.copyWith(
+          fontSize: 10,
+          color: fieldTextColor.withOpacity(0.7),
+        ),
+        filled: true,
+        fillColor: fieldFillColor,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 18,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: fieldTextColor.withOpacity(0.15)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: appBarColor, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Colors.redAccent),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+        ),
+      );
+    }
+
+    Widget sectionTitle(String title) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Text(title, style: sectionTitleStyle),
+      );
+    }
+
+    Widget sectionCard(List<Widget> children) {
+      return Card(
+        elevation: 1,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Agregar producto')),
+      appBar: AppBar(
+        title: const Text(
+          'Agregar producto',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+        ),
+        backgroundColor: appBarColor,
+        foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          Obx(
+            () => IconButton(
+              icon: const Icon(Icons.save),
+              tooltip: 'Guardar producto',
+              onPressed: controller.estaGuardando.value
+                  ? null
+                  : controller.guardarProducto,
+            ),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Form(
           key: controller.formularioKey,
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              TextFormField(
-                controller: controller.controladorNombre,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre del producto',
+              sectionTitle('Negocio'),
+              sectionCard([
+                TextFormField(
+                  controller: controller.controladorIdNegocio,
+                  style: fieldTextStyle,
+                  decoration: inputDecoration(labelText: 'ID de negocio'),
                 ),
-                validator: controller.validarCampoObligatorio,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: controller.controladorDescripcion,
-                decoration: const InputDecoration(labelText: 'Descripción'),
-                maxLines: 3,
-                validator: controller.validarCampoObligatorio,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: controller.controladorCodigoProducto,
-                decoration: const InputDecoration(
-                  labelText: 'Código de producto',
-                  helperText: 'Temporal: se ingresa manualmente por ahora',
+              ]),
+              const SizedBox(height: 16),
+              sectionTitle('Detalle del producto'),
+              sectionCard([
+                TextFormField(
+                  controller: controller.controladorNombre,
+                  style: fieldTextStyle,
+                  decoration: inputDecoration(labelText: 'Nombre del producto'),
+                  validator: controller.validarCampoObligatorio,
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: controller.controladorIdCategoria,
-                decoration: const InputDecoration(
-                  labelText: 'ID de categoría',
-                  helperText: 'Temporal: se ingresa manualmente por ahora',
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: controller.controladorDescripcion,
+                  style: fieldTextStyle,
+                  decoration: inputDecoration(labelText: 'Descripción'),
+                  maxLines: 2,
+                  validator: controller.validarCampoObligatorio,
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: controller.controladorIdNegocio,
-                decoration: const InputDecoration(
-                  labelText: 'ID de negocio',
-                  helperText: 'Temporal: se ingresa manualmente por ahora',
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: controller.controladorCodigoProducto,
+                  style: fieldTextStyle,
+                  decoration: inputDecoration(labelText: 'Código de producto'),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: controller.controladorCodigoBarra,
-                decoration: const InputDecoration(
-                  labelText: 'Código de barra (opcional)',
-                  helperText: 'Por ahora se ingresa manual, luego se escanea',
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: controller.controladorIdCategoria,
+                  style: fieldTextStyle,
+                  decoration: inputDecoration(labelText: 'ID de categoría'),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: controller.controladorUnidadMedida,
-                decoration: const InputDecoration(
-                  labelText: 'Unidad de medida',
-                ),
-                validator: controller.validarCampoObligatorio,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: controller.controladorStockActual,
-                      decoration: const InputDecoration(
-                        labelText: 'Stock actual',
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      validator: controller.validarCampoNumerico,
-                    ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: controller.controladorCodigoBarra,
+                  style: fieldTextStyle,
+                  decoration: inputDecoration(
+                    labelText: 'Código de barra (opcional)',
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: controller.controladorStockMinimo,
-                      decoration: const InputDecoration(
-                        labelText: 'Stock mínimo',
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      validator: controller.validarCampoNumerico,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: controller.controladorStockMaximo,
-                decoration: const InputDecoration(labelText: 'Stock máximo'),
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
                 ),
-                validator: controller.validarCampoNumerico,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: controller.controladorPrecioCompra,
-                      decoration: const InputDecoration(
-                        labelText: 'Precio de compra',
+              ]),
+              const SizedBox(height: 16),
+              sectionTitle('Inventario'),
+              sectionCard([
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: controller.controladorUnidadMedida,
+                        style: fieldTextStyle,
+                        decoration: inputDecoration(
+                          labelText: 'Unidad de medida',
+                        ),
+                        validator: controller.validarCampoObligatorio,
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      validator: controller.validarCampoNumerico,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: controller.controladorPrecioVenta,
-                      decoration: const InputDecoration(
-                        labelText: 'Precio de venta',
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: controller.controladorStockActual,
+                        style: fieldTextStyle,
+                        decoration: inputDecoration(labelText: 'Stock actual'),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator: controller.validarCampoNumerico,
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      validator: controller.validarCampoNumerico,
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: controller.controladorStockMaximo,
+                        style: fieldTextStyle,
+                        decoration: inputDecoration(labelText: 'Stock máximo'),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator: controller.validarCampoNumerico,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: controller.controladorStockMinimo,
+                        style: fieldTextStyle,
+                        decoration: inputDecoration(labelText: 'Stock mínimo'),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator: controller.validarCampoNumerico,
+                      ),
+                    ),
+                  ],
+                ),
+              ]),
+              const SizedBox(height: 16),
+              sectionTitle('Precio Lps'),
+              sectionCard([
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: controller.controladorPrecioCompra,
+                        style: fieldTextStyle,
+                        decoration: inputDecoration(
+                          labelText: 'Precio de compra',
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator: controller.validarCampoNumerico,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: controller.controladorPrecioVenta,
+                        style: fieldTextStyle,
+                        decoration: inputDecoration(
+                          labelText: 'Precio de venta',
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator: controller.validarCampoNumerico,
+                      ),
+                    ),
+                  ],
+                ),
+              ]),
               const SizedBox(height: 24),
               Obx(
-                () => ElevatedButton(
-                  onPressed: controller.estaGuardando.value
-                      ? null
-                      : controller.guardarProducto,
-                  child: controller.estaGuardando.value
+                () => ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: appBarColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  icon: const Icon(Icons.save),
+                  label: controller.estaGuardando.value
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Text('Guardar producto'),
+                  onPressed: controller.estaGuardando.value
+                      ? null
+                      : controller.guardarProducto,
                 ),
               ),
             ],
