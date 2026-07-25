@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
-<<<<<<< Updated upstream
-=======
-import 'package:mi_inventario/auth_service.dart';
-import 'package:mi_inventario/login_screen.dart';
-import 'package:mi_inventario/Categorias/categoria_screen.dart';
->>>>>>> Stashed changes
 import 'package:firebase_core/firebase_core.dart';
 import 'package:get/get.dart';
 import 'package:mi_inventario/auth/services/auth_service.dart';
 import 'package:mi_inventario/controller/productos_controller.dart';
 import 'package:mi_inventario/login/login_screen.dart';
+import 'package:mi_inventario/Categorias/categoria_screen.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -122,27 +117,6 @@ class HomeScreen extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class CategoriaScreen extends StatelessWidget {
-  const CategoriaScreen({super.key, required this.negocioId});
-
-  final String negocioId;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Categorías'),
-      ),
-      body: Center(
-        child: Text(
-          'Negocio ID: $negocioId',
-          style: Theme.of(context).textTheme.titleMedium,
         ),
       ),
     );

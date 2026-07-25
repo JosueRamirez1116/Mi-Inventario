@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
-<<<<<<<< Updated upstream:lib/categoria/categoria_screen.dart
-import 'package:mi_inventario/model/categoria_model.dart';
-import 'package:mi_inventario/categoria/categoria_service.dart';
-========
 import 'package:mi_inventario/Categorias/categoria_model.dart';
 import 'package:mi_inventario/Categorias/categoria_service.dart';
->>>>>>>> Stashed changes:lib/Categorias/categoria_screen.dart
 
 class CategoriaScreen extends StatefulWidget {
   final String negocioId;
