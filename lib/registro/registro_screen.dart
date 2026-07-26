@@ -1,5 +1,4 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:mi_inventario/auth/services/auth_service.dart';
 import 'package:mi_inventario/registro/registro_negocio_screen.dart';
@@ -21,21 +20,12 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _confirmPasswordController = TextEditingController();
   final AuthService _authService = AuthService();
   DateTime? _fechaNacimiento;
-  String? _verificationId;
-  String? _telefonoVerificado;
 
   bool _cargando = false;
-  bool _verificandoTelefono = false;
   String? _error;
 
   Future<void> _registrar() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_telefonoVerificado != _telefonoController.text.trim()) {
-      setState(() {
-        _error = 'Debes verificar tu numero telefonico antes de registrarte.';
-      });
-      return;
-    }
 
     setState(() {
       _cargando = true;
@@ -58,9 +48,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
         );
       }
     } on FirebaseAuthException catch (e) {
-      setState(() => _error = _mensajeError(e.code));
+      setState(() => _error = _mensajeError(e.code, e.message));
     } on FirebaseException catch (e) {
-      setState(() => _error = _mensajeError(e.code));
+      setState(() => _error = _mensajeError(e.code, e.message));
     } catch (_) {
       setState(() => _error = 'Ocurrio un error inesperado. Intenta de nuevo.');
     } finally {
@@ -68,145 +58,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
     }
   }
 
-  Future<void> _verificarTelefono() async {
-    if (_telefonoController.text.trim().isEmpty) {
-      setState(() {
-        _error = 'Ingresa un numero telefonico para verificarlo.';
-      });
-      return;
-    }
-
-    final telefono = _telefonoController.text.trim();
-    if (!telefono.startsWith('+') || telefono.length < 11) {
-      setState(() {
-        _error = 'Usa formato internacional. Ejemplo: +521234567890';
-      });
-      return;
-    }
-
-    setState(() {
-      _verificandoTelefono = true;
-      _error = null;
-      _telefonoVerificado = null;
-    });
-
-    try {
-      await _authService.iniciarVerificacionTelefono(
-        numeroTelefono: telefono,
-        codigoEnviado: (verificationId, _) async {
-          _verificationId = verificationId;
-          if (!mounted) return;
-          await _mostrarDialogoCodigoSms();
-        },
-        verificacionFallida: (e) {
-          if (!mounted) return;
-          setState(() {
-            _error = _mensajeError(e.code);
-          });
-        },
-        verificacionAutomaticaCompletada: () async {
-          if (!mounted) return;
-          setState(() {
-            _telefonoVerificado = telefono;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Telefono verificado correctamente.')),
-          );
-        },
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _verificandoTelefono = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _mostrarDialogoCodigoSms() async {
-    final codigoController = TextEditingController();
-    bool validando = false;
-
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Verificar telefono'),
-              content: TextField(
-                controller: codigoController,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                decoration: const InputDecoration(
-                  labelText: 'Codigo SMS',
-                  hintText: 'Ingresa el codigo recibido',
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: validando
-                      ? null
-                      : () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancelar'),
-                ),
-                FilledButton(
-                  onPressed: validando
-                      ? null
-                      : () async {
-                          if (_verificationId == null ||
-                              codigoController.text.trim().length < 6) {
-                            return;
-                          }
-
-                          setDialogState(() => validando = true);
-                          try {
-                            await _authService.confirmarCodigoTelefono(
-                              verificationId: _verificationId!,
-                              codigoSms: codigoController.text.trim(),
-                            );
-                            if (!mounted) return;
-                            setState(() {
-                              _telefonoVerificado = _telefonoController.text
-                                  .trim();
-                              _error = null;
-                            });
-                            if (dialogContext.mounted) {
-                              Navigator.of(dialogContext).pop();
-                            }
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Telefono verificado correctamente.',
-                                ),
-                              ),
-                            );
-                          } on FirebaseAuthException catch (e) {
-                            setDialogState(() => validando = false);
-                            if (!mounted) return;
-                            setState(() {
-                              _error = _mensajeError(e.code);
-                            });
-                          }
-                        },
-                  child: validando
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Validar codigo'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  String _mensajeError(String codigo) {
+  String _mensajeError(String codigo, [String? mensaje]) {
     switch (codigo) {
       case 'email-already-in-use':
         return 'Este correo ya esta registrado.';
@@ -216,20 +68,16 @@ class _RegistroScreenState extends State<RegistroScreen> {
         return 'La contrasena es muy debil. Usa al menos 6 caracteres.';
       case 'network-request-failed':
         return 'Sin conexion a internet. Verifica tu red.';
-      case 'invalid-phone-number':
-        return 'Numero telefonico invalido.';
-      case 'too-many-requests':
-        return 'Demasiados intentos. Intenta de nuevo mas tarde.';
-      case 'session-expired':
-        return 'El codigo SMS expiro. Solicita uno nuevo.';
-      case 'invalid-verification-code':
-        return 'El codigo SMS es incorrecto.';
       case 'permission-denied':
         return 'No hay permisos para guardar el usuario en la base de datos.';
       case 'missing-uid':
         return 'No se pudo crear el perfil del usuario. Intenta de nuevo.';
       default:
-        return 'No se pudo crear la cuenta. Intenta de nuevo.';
+        final detalle = mensaje?.trim();
+        if (detalle != null && detalle.isNotEmpty) {
+          return 'Error ($codigo): $detalle';
+        }
+        return 'No se pudo crear la cuenta. Intenta de nuevo. [$codigo]';
     }
   }
 
@@ -341,20 +189,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
                 TextFormField(
                   controller: _telefonoController,
                   keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Numero telefonico',
                     hintText: '+521234567890',
-                    suffixIcon:
-                        _telefonoVerificado == _telefonoController.text.trim()
-                        ? const Icon(Icons.verified, color: Colors.green)
-                        : null,
                   ),
-                  onChanged: (_) {
-                    if (_telefonoVerificado !=
-                        _telefonoController.text.trim()) {
-                      setState(() => _telefonoVerificado = null);
-                    }
-                  },
                   validator: (valor) {
                     if (valor == null || valor.trim().isEmpty) {
                       return 'Ingresa tu numero telefonico';
@@ -365,27 +203,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     }
                     return null;
                   },
-                ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: OutlinedButton.icon(
-                    onPressed: (_cargando || _verificandoTelefono)
-                        ? null
-                        : _verificarTelefono,
-                    icon: _verificandoTelefono
-                        ? const SizedBox(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.sms),
-                    label: Text(
-                      _telefonoVerificado == _telefonoController.text.trim()
-                          ? 'Telefono verificado'
-                          : 'Verificar telefono',
-                    ),
-                  ),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(

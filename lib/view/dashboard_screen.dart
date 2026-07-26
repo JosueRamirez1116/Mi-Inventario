@@ -36,7 +36,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           MaterialPageRoute(builder: (_) => const AgregarProductosScreen()),
         );
         break;
-
       case 'Categorias':
       case 'Categorías':
         Navigator.push(
@@ -47,12 +46,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       case 'Negocios':
       case 'Tiendas':
+      case 'Mi Negocio':
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const NegociosScreen()),
         );
         break;
-
       default:
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
