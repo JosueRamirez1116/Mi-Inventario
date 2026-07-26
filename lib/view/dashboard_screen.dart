@@ -1,9 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:mi_inventario/auth/services/auth_service.dart';
-import 'package:mi_inventario/categoria/categoria_screen.dart';
 import 'package:mi_inventario/controller/dashboard_controller.dart';
 import 'package:mi_inventario/model/dashboard_model.dart';
 import 'package:mi_inventario/view/productos/agregar_productos_screen.dart';
+
+class CategoriaScreen extends StatelessWidget {
+  const CategoriaScreen({
+    super.key,
+    required this.negocioId,
+  });
+
+  final String negocioId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Categorías'),
+      ),
+      body: const Center(
+        child: Text('Pantalla de categorías'),
+      ),
+    );
+  }
+}
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({

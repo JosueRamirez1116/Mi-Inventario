@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:get/get.dart';
+import 'package:mi_inventario/controller/productos_controller.dart';
 
 class AuthService {
   FirebaseAuth? _auth;
@@ -147,8 +149,11 @@ class AuthService {
     }, SetOptions(merge: true));
   }
 
-  Future<void> cerrarSesion() {
-    return _authInstance.signOut();
+  Future<void> cerrarSesion() async {
+    await _authInstance.signOut();
+    if (Get.isRegistered<ProductosController>()) {
+      Get.delete<ProductosController>();
+    }
   }
 
   Future<void> restablecerContrasena(String email) {
