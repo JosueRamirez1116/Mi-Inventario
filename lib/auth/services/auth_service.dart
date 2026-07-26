@@ -69,7 +69,7 @@ class AuthService {
         'email': email.trim(),
         'fechaNacimiento': Timestamp.fromDate(fechaNacimiento),
         'telefono': telefono.trim(),
-        'telefonoVerificado': true,
+        'telefonoVerificado': false,
         'estado': 1,
         'creadoEn': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));

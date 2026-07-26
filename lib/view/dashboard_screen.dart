@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:mi_inventario/auth/services/auth_service.dart';
+import 'package:mi_inventario/Categorias/categoria_screen.dart';
 import 'package:mi_inventario/controller/dashboard_controller.dart';
 import 'package:mi_inventario/model/dashboard_model.dart';
+import 'package:mi_inventario/view/negocios/negocios_screen.dart';
 import 'package:mi_inventario/view/productos/agregar_productos_screen.dart';
 
 class CategoriaScreen extends StatelessWidget {
@@ -26,10 +28,7 @@ class CategoriaScreen extends StatelessWidget {
 }
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({
-    super.key,
-    required this.authService,
-  });
+  const DashboardScreen({super.key, required this.authService});
 
   final AuthService authService;
 
@@ -48,39 +47,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
     opciones = _controller.opciones;
   }
 
- void abrirOpcion(DashboardModel opcion) {
-  final uid = widget.authService.usuarioActual?.uid ?? 'default';
+  void abrirOpcion(DashboardModel opcion) {
+    final uid = widget.authService.usuarioActual?.uid ?? 'default';
 
-  switch (opcion.titulo) {
-    case 'Productos':
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const AgregarProductosScreen(),
-        ),
-      );
-      break;
-    case 'Categorias':
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => CategoriaScreen(
-            negocioId: uid,
-          ),
-        ),
-      );
-      break;
+    switch (opcion.titulo) {
+      case 'Productos':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AgregarProductosScreen()),
+        );
+        break;
+      case 'Categorias':
+      case 'Categorías':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => CategoriaScreen(negocioId: uid)),
+        );
+        break;
 
-    default:
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'La pantalla de ${opcion.titulo} estará disponible próximamente',
+      case 'Negocios':
+      case 'Tiendas':
+      case 'Mi Negocio':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const NegociosScreen()),
+        );
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'La pantalla de ${opcion.titulo} '
+              'estará disponible próximamente',
+            ),
           ),
-        ),
-      );
+        );
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -91,9 +94,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         foregroundColor: Colors.white,
         title: const Text(
           'Inicio - Mi Inventario',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
@@ -107,8 +108,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         padding: const EdgeInsets.all(16),
         child: GridView.builder(
           itemCount: opciones.length,
-          gridDelegate:
-              const SliverGridDelegateWithFixedCrossAxisCount(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             crossAxisSpacing: 14,
             mainAxisSpacing: 14,
@@ -136,12 +136,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Icon(
                         opcion.icono,
                         size: 50,
-                        color: const Color.fromARGB(
-                          255,
-                          30,
-                          112,
-                          198,
-                        ),
+                        color: const Color.fromARGB(255, 30, 112, 198),
                       ),
                       const SizedBox(height: 12),
                       Text(
