@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:get/get.dart';
 import 'package:mi_inventario/auth/services/auth_service.dart';
+import 'package:mi_inventario/configuracion/perfil_usuario_screen.dart';
 import 'package:mi_inventario/controller/productos_controller.dart';
 import 'package:mi_inventario/login/login_screen.dart';
 import 'package:mi_inventario/view/dashboard_screen.dart';
@@ -94,6 +95,15 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Mi Inventario'),
         actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const PerfilUsuarioScreen()),
+              );
+            },
+            icon: const Icon(Icons.settings),
+            tooltip: 'Configuracion',
+          ),
           IconButton(
             onPressed: authService.cerrarSesion,
             icon: const Icon(Icons.logout),
