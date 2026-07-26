@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:get/get.dart';
 import 'package:mi_inventario/auth/services/auth_service.dart';
 import 'package:mi_inventario/configuracion/perfil_usuario_screen.dart';
+import 'package:mi_inventario/controller/productos_controller.dart';
 import 'package:mi_inventario/login/login_screen.dart';
+import 'package:mi_inventario/Categorias/categoria_screen.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -15,6 +18,8 @@ Future<void> main() async {
     );
   } catch (_) {}
 
+  Get.put(ProductosController());
+
   runApp(const MyApp());
 }
 
@@ -23,7 +28,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
       title: 'Mi Inventario',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -35,15 +40,20 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final auth = AuthService();
+  State<AuthGate> createState() => _AuthGateState();
+}
 
+class _AuthGateState extends State<AuthGate> {
+  final AuthService _auth = AuthService();
+
+  @override
+  Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: auth.authStateChanges,
+      stream: _auth.authStateChanges,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -52,10 +62,10 @@ class AuthGate extends StatelessWidget {
         }
 
         if (snapshot.hasData) {
-          return HomeScreen(authService: auth);
+          return HomeScreen(authService: _auth);
         }
-
-        return const LoginScreen();
+        return LoginScreen();
+        //return const AgregarProductosScreen();
       },
     );
   }
@@ -69,6 +79,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final email = authService.usuarioActual?.email ?? 'Usuario';
+    final uid = authService.usuarioActual?.uid ?? 'default';
 
     return Scaffold(
       appBar: AppBar(
@@ -90,7 +101,34 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(child: Text('Sesion iniciada: $email')),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.inventory_2_outlined, size: 72),
+              const SizedBox(height: 16),
+              Text(
+                'Sesion iniciada: $email',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CategoriaScreen(negocioId: uid),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.category),
+                label: const Text('Gestionar categorias'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

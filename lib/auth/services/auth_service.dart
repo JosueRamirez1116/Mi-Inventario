@@ -2,15 +2,37 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  FirebaseAuth? _auth;
+  FirebaseFirestore? _db;
 
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  FirebaseAuth get _authInstance {
+    _auth ??= FirebaseAuth.instance;
+    return _auth!;
+  }
 
-  User? get usuarioActual => _auth.currentUser;
+  FirebaseFirestore get _dbInstance {
+    _db ??= FirebaseFirestore.instance;
+    return _db!;
+  }
+
+  Stream<User?> get authStateChanges {
+    try {
+      return _authInstance.authStateChanges();
+    } on FirebaseException catch (_) {
+      return const Stream.empty();
+    }
+  }
+
+  User? get usuarioActual {
+    try {
+      return _authInstance.currentUser;
+    } on FirebaseException catch (_) {
+      return null;
+    }
+  }
 
   Future<UserCredential> registrar(String email, String password) {
-    return _auth.createUserWithEmailAndPassword(
+    return _authInstance.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
@@ -24,7 +46,7 @@ class AuthService {
     required DateTime fechaNacimiento,
     required String telefono,
   }) async {
-    final credencial = await _auth.createUserWithEmailAndPassword(
+    final credencial = await _authInstance.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
@@ -38,7 +60,7 @@ class AuthService {
     }
 
     try {
-      await _db.collection('usuarios').doc(uid).set({
+      await _dbInstance.collection('usuarios').doc(uid).set({
         'uid': uid,
         'nombre': nombre.trim(),
         'apellido': apellido.trim(),
@@ -65,11 +87,11 @@ class AuthService {
     required void Function(FirebaseAuthException e) verificacionFallida,
     required Future<void> Function() verificacionAutomaticaCompletada,
   }) async {
-    await _auth.verifyPhoneNumber(
+    await _authInstance.verifyPhoneNumber(
       phoneNumber: numeroTelefono,
       verificationCompleted: (PhoneAuthCredential credential) async {
-        await _auth.signInWithCredential(credential);
-        await _auth.signOut();
+        await _authInstance.signInWithCredential(credential);
+        await _authInstance.signOut();
         await verificacionAutomaticaCompletada();
       },
       verificationFailed: verificacionFallida,
@@ -87,12 +109,12 @@ class AuthService {
       smsCode: codigoSms,
     );
 
-    await _auth.signInWithCredential(credential);
-    await _auth.signOut();
+    await _authInstance.signInWithCredential(credential);
+    await _authInstance.signOut();
   }
 
   Future<UserCredential> iniciarSesion(String email, String password) async {
-    final credencial = await _auth.signInWithEmailAndPassword(
+    final credencial = await _authInstance.signInWithEmailAndPassword(
       email: email,
       password: password,
     );
@@ -108,7 +130,7 @@ class AuthService {
   }
 
   Future<void> _asegurarPerfilUsuarioMinimo(User user) async {
-    final ref = _db.collection('usuarios').doc(user.uid);
+    final ref = _dbInstance.collection('usuarios').doc(user.uid);
     final doc = await ref.get();
     if (doc.exists) return;
 
@@ -126,18 +148,18 @@ class AuthService {
   }
 
   Future<void> cerrarSesion() {
-    return _auth.signOut();
+    return _authInstance.signOut();
   }
 
   Future<void> restablecerContrasena(String email) {
-    return _auth.sendPasswordResetEmail(email: email.trim());
+    return _authInstance.sendPasswordResetEmail(email: email.trim());
   }
 
   Future<void> reautenticarConContrasena({
     required String email,
     required String password,
   }) async {
-    final user = _auth.currentUser;
+    final user = _authInstance.currentUser;
     if (user == null) {
       throw FirebaseAuthException(
         code: 'missing-uid',
@@ -154,18 +176,18 @@ class AuthService {
   }
 
   Future<Map<String, dynamic>?> obtenerPerfilUsuario() async {
-    final uid = _auth.currentUser?.uid;
+    final uid = _authInstance.currentUser?.uid;
     if (uid == null) return null;
 
-    final doc = await _db.collection('usuarios').doc(uid).get();
+    final doc = await _dbInstance.collection('usuarios').doc(uid).get();
     return doc.data();
   }
 
   Future<Map<String, dynamic>?> obtenerPerfilNegocio() async {
-    final uid = _auth.currentUser?.uid;
+    final uid = _authInstance.currentUser?.uid;
     if (uid == null) return null;
 
-    final doc = await _db.collection('negocios').doc(uid).get();
+    final doc = await _dbInstance.collection('negocios').doc(uid).get();
     return doc.data();
   }
 
@@ -175,7 +197,7 @@ class AuthService {
     required DateTime fechaNacimiento,
     required String telefono,
   }) async {
-    final uid = _auth.currentUser?.uid;
+    final uid = _authInstance.currentUser?.uid;
     if (uid == null) {
       throw FirebaseAuthException(
         code: 'missing-uid',
@@ -183,7 +205,7 @@ class AuthService {
       );
     }
 
-    await _db.collection('usuarios').doc(uid).set({
+    await _dbInstance.collection('usuarios').doc(uid).set({
       'nombre': nombre.trim(),
       'apellido': apellido.trim(),
       'fechaNacimiento': Timestamp.fromDate(fechaNacimiento),
@@ -198,7 +220,7 @@ class AuthService {
     required String telefono,
     required String correo,
   }) async {
-    final uid = _auth.currentUser?.uid;
+    final uid = _authInstance.currentUser?.uid;
     if (uid == null) {
       throw FirebaseAuthException(
         code: 'missing-uid',
@@ -206,7 +228,7 @@ class AuthService {
       );
     }
 
-    await _db.collection('negocios').doc(uid).set({
+    await _dbInstance.collection('negocios').doc(uid).set({
       'nombreNegocio': nombreNegocio.trim(),
       'direccion': direccion.trim(),
       'telefono': telefono.trim(),
@@ -216,7 +238,7 @@ class AuthService {
   }
 
   Future<void> eliminarNegocio() async {
-    final uid = _auth.currentUser?.uid;
+    final uid = _authInstance.currentUser?.uid;
     if (uid == null) {
       throw FirebaseAuthException(
         code: 'missing-uid',
@@ -224,14 +246,14 @@ class AuthService {
       );
     }
 
-    await _db.collection('negocios').doc(uid).set({
+    await _dbInstance.collection('negocios').doc(uid).set({
       'estado': 0,
       'eliminadoEn': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
 
   Future<void> eliminarCuentaUsuario() async {
-    final user = _auth.currentUser;
+    final user = _authInstance.currentUser;
     final uid = user?.uid;
 
     if (user == null || uid == null) {
@@ -241,7 +263,7 @@ class AuthService {
       );
     }
 
-    await _db.collection('usuarios').doc(uid).set({
+    await _dbInstance.collection('usuarios').doc(uid).set({
       'estado': 0,
       'eliminadoEn': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
