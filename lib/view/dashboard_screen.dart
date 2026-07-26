@@ -3,6 +3,7 @@ import 'package:mi_inventario/auth/services/auth_service.dart';
 import 'package:mi_inventario/Categorias/categoria_screen.dart';
 import 'package:mi_inventario/controller/dashboard_controller.dart';
 import 'package:mi_inventario/model/dashboard_model.dart';
+import 'package:mi_inventario/view/negocios/negocios_screen.dart';
 import 'package:mi_inventario/view/productos/agregar_productos_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -36,17 +37,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
         break;
       case 'Categorias':
+      case 'Categorías':
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => CategoriaScreen(negocioId: uid)),
         );
         break;
 
+      case 'Negocios':
+      case 'Tiendas':
+      case 'Mi Negocio':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const NegociosScreen()),
+        );
+        break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'La pantalla de ${opcion.titulo} estará disponible próximamente',
+              'La pantalla de ${opcion.titulo} '
+              'estará disponible próximamente',
             ),
           ),
         );
