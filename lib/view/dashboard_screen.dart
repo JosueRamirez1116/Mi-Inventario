@@ -1,10 +1,9 @@
-
 import 'package:flutter/material.dart';
 import 'package:mi_inventario/auth/services/auth_service.dart';
 import 'package:mi_inventario/categoria/categoria_screen.dart';
 import 'package:mi_inventario/controller/dashboard_controller.dart';
 import 'package:mi_inventario/model/dashboard_model.dart';
-
+import 'package:mi_inventario/view/productos/agregar_productos_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({
@@ -20,34 +19,28 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final DashboardController _controller = DashboardController();
-  final TextEditingController _buscarController = TextEditingController();
 
-  List<DashboardModel> opcionesFiltradas = [];
+  List<DashboardModel> opciones = [];
 
   @override
   void initState() {
     super.initState();
-    opcionesFiltradas = _controller.opciones;
+    opciones = _controller.opciones;
   }
 
-  void buscarOpcion(String texto) {
-    setState(() {
-      if (texto.isEmpty) {
-        opcionesFiltradas = _controller.opciones;
-      } else {
-        opcionesFiltradas = _controller.opciones.where((opcion) {
-          return opcion.titulo
-              .toLowerCase()
-              .contains(texto.toLowerCase());
-        }).toList();
-      }
-    });
-  }
+ void abrirOpcion(DashboardModel opcion) {
+  final uid = widget.authService.usuarioActual?.uid ?? 'default';
 
-  void abrirOpcion(DashboardModel opcion) {
-    final uid = widget.authService.usuarioActual?.uid ?? 'default';
-
-    if (opcion.titulo == 'Categorías') {
+  switch (opcion.titulo) {
+    case 'Productos':
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const AgregarProductosScreen(),
+        ),
+      );
+      break;
+    case 'Categorias':
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -56,7 +49,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       );
-    } else {
+      break;
+
+    default:
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -64,14 +59,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       );
-    }
   }
-
-  @override
-  void dispose() {
-    _buscarController.dispose();
-    super.dispose();
-  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +70,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         backgroundColor: const Color.fromARGB(255, 28, 83, 170),
         foregroundColor: Colors.white,
         title: const Text(
-          'Inicio - Dashboard',
+          'Inicio - Mi Inventario',
           style: TextStyle(
             fontWeight: FontWeight.bold,
           ),
@@ -96,84 +85,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: _buscarController,
-              onChanged: buscarOpcion,
-              decoration: InputDecoration(
-                hintText: 'Buscar opción...',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: BorderSide.none,
-                ),
+        child: GridView.builder(
+          itemCount: opciones.length,
+          gridDelegate:
+              const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
+            childAspectRatio: 1.15,
+          ),
+          itemBuilder: (context, index) {
+            final opcion = opciones[index];
+
+            return Card(
+              elevation: 5,
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
               ),
-            ),
-
-            const SizedBox(height: 22),
-
-            Expanded(
-              child: GridView.builder(
-                itemCount: opcionesFiltradas.length,
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
-                  childAspectRatio: 1.15,
-                ),
-                itemBuilder: (context, index) {
-                  final opcion = opcionesFiltradas[index];
-
-                  return Card(
-                    elevation: 5,
-                    color: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      onTap: () {
-                        abrirOpcion(opcion);
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(15),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              opcion.icono,
-                              size: 50,
-                              color: const Color.fromARGB(
-                                255,
-                                30,
-                                112,
-                                198,
-                              ),
-                            ),
-
-                            const SizedBox(height: 12),
-
-                            Text(
-                              opcion.titulo,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+              child: InkWell(
+                borderRadius: BorderRadius.circular(18),
+                onTap: () {
+                  abrirOpcion(opcion);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(15),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        opcion.icono,
+                        size: 50,
+                        color: const Color.fromARGB(
+                          255,
+                          30,
+                          112,
+                          198,
                         ),
                       ),
-                    ),
-                  );
-                },
+                      const SizedBox(height: 12),
+                      Text(
+                        opcion.titulo,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
