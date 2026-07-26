@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:mi_inventario/auth/services/auth_service.dart';
-import 'package:mi_inventario/Categorias/categoria_screen.dart';
 import 'package:mi_inventario/controller/dashboard_controller.dart';
 import 'package:mi_inventario/model/dashboard_model.dart';
 import 'package:mi_inventario/view/negocios/negocios_screen.dart';

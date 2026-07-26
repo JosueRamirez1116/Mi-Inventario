@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:mi_inventario/auth/services/auth_service.dart';
 import 'package:mi_inventario/login/login_screen.dart';
 import 'package:mi_inventario/view/dashboard_screen.dart';
+import 'package:mi_inventario/configuracion/perfil_usuario_screen.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
