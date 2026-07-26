@@ -32,9 +32,7 @@ class MyApp extends StatelessWidget {
       title: 'Mi Inventario',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.indigo,
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
       ),
       home: const AuthGate(),
@@ -57,29 +55,21 @@ class _AuthGateState extends State<AuthGate> {
     return StreamBuilder(
       stream: _auth.authStateChanges,
       builder: (context, snapshot) {
-        if (snapshot.connectionState ==
-            ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
         if (snapshot.hasData) {
-          return DashboardScreen(
-            authService: _auth,
-          );
+          return DashboardScreen(authService: _auth);
         }
         return LoginScreen();
         //return const AgregarProductosScreen();
       },
     );
   }
-
 }
-
-
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key, required this.authService});
