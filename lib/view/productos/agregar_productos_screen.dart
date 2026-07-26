@@ -44,7 +44,9 @@ class AgregarProductosScreen extends GetView<ProductosController> {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: fieldTextColor.withValues(alpha: 0.15)),
+          borderSide: BorderSide(
+            color: fieldTextColor.withAlpha((0.15 * 255).round()),
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -218,7 +220,7 @@ class AgregarProductosScreen extends GetView<ProductosController> {
                 ),
               ]),
               const SizedBox(height: 16),
-              sectionTitle('Precio Lps'),
+              sectionTitle('Precio en Lps'),
               sectionCard([
                 Row(
                   children: [

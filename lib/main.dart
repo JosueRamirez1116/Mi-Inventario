@@ -5,13 +5,13 @@ import 'package:mi_inventario/auth/services/auth_service.dart';
 import 'package:mi_inventario/configuracion/perfil_usuario_screen.dart';
 import 'package:mi_inventario/controller/productos_controller.dart';
 import 'package:mi_inventario/login/login_screen.dart';
+import 'package:mi_inventario/view/dashboard_screen.dart';
 import 'package:mi_inventario/Categorias/categoria_screen.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Permite arrancar la app incluso si Firebase aun no esta configurado.
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -32,7 +32,9 @@ class MyApp extends StatelessWidget {
       title: 'Mi Inventario',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.indigo,
+        ),
         useMaterial3: true,
       ),
       home: const AuthGate(),
@@ -55,20 +57,28 @@ class _AuthGateState extends State<AuthGate> {
     return StreamBuilder(
       stream: _auth.authStateChanges,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.connectionState ==
+            ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
           );
         }
 
         if (snapshot.hasData) {
-          return HomeScreen(authService: _auth);
+          return DashboardScreen(
+            authService: _auth,
+          );
         }
         return LoginScreen();
         //return const AgregarProductosScreen();
       },
     );
   }
+
+}
+
 }
 
 class HomeScreen extends StatelessWidget {
