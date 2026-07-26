@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:mi_inventario/auth/services/auth_service.dart';
 import 'package:mi_inventario/registro/registro_negocio_screen.dart';
@@ -57,6 +58,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
         );
       }
     } on FirebaseAuthException catch (e) {
+      setState(() => _error = _mensajeError(e.code));
+    } on FirebaseException catch (e) {
       setState(() => _error = _mensajeError(e.code));
     } catch (_) {
       setState(() => _error = 'Ocurrio un error inesperado. Intenta de nuevo.');
@@ -221,6 +224,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
         return 'El codigo SMS expiro. Solicita uno nuevo.';
       case 'invalid-verification-code':
         return 'El codigo SMS es incorrecto.';
+      case 'permission-denied':
+        return 'No hay permisos para guardar el usuario en la base de datos.';
+      case 'missing-uid':
+        return 'No se pudo crear el perfil del usuario. Intenta de nuevo.';
       default:
         return 'No se pudo crear la cuenta. Intenta de nuevo.';
     }

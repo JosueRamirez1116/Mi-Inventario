@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mi_inventario/auth/services/auth_service.dart';
 import 'package:mi_inventario/registro/registro_screen.dart';
 
@@ -36,6 +37,8 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } on FirebaseAuthException catch (e) {
       setState(() => _error = _mensajeError(e.code));
+    } on FirebaseException catch (e) {
+      setState(() => _error = _mensajeError(e.code));
     } catch (e) {
       setState(() => _error = 'Ocurrió un error inesperado. Intenta de nuevo.');
     } finally {
@@ -59,6 +62,8 @@ class _LoginScreenState extends State<LoginScreen> {
         return 'Demasiados intentos. Intenta de nuevo en unos minutos.';
       case 'network-request-failed':
         return 'Sin conexión a internet. Verifica tu red.';
+      case 'permission-denied':
+        return 'No hay permisos para acceder a la base de datos.';
       default:
         return 'No se pudo iniciar sesión. Intenta de nuevo.';
     }

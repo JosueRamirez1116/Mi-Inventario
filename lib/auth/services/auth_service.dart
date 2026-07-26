@@ -37,17 +37,25 @@ class AuthService {
       );
     }
 
-    await _db.collection('usuarios').doc(uid).set({
-      'uid': uid,
-      'nombre': nombre.trim(),
-      'apellido': apellido.trim(),
-      'email': email.trim(),
-      'fechaNacimiento': Timestamp.fromDate(fechaNacimiento),
-      'telefono': telefono.trim(),
-      'telefonoVerificado': true,
-      'estado': 1,
-      'creadoEn': FieldValue.serverTimestamp(),
-    });
+    try {
+      await _db.collection('usuarios').doc(uid).set({
+        'uid': uid,
+        'nombre': nombre.trim(),
+        'apellido': apellido.trim(),
+        'email': email.trim(),
+        'fechaNacimiento': Timestamp.fromDate(fechaNacimiento),
+        'telefono': telefono.trim(),
+        'telefonoVerificado': true,
+        'estado': 1,
+        'creadoEn': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } on FirebaseException {
+      // Evita usuarios huerfanos en Authentication cuando falla Firestore.
+      try {
+        await credencial.user?.delete();
+      } catch (_) {}
+      rethrow;
+    }
   }
 
   Future<void> iniciarVerificacionTelefono({
@@ -83,8 +91,38 @@ class AuthService {
     await _auth.signOut();
   }
 
-  Future<UserCredential> iniciarSesion(String email, String password) {
-    return _auth.signInWithEmailAndPassword(email: email, password: password);
+  Future<UserCredential> iniciarSesion(String email, String password) async {
+    final credencial = await _auth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+
+    final user = credencial.user;
+    if (user != null) {
+      try {
+        await _asegurarPerfilUsuarioMinimo(user);
+      } catch (_) {}
+    }
+
+    return credencial;
+  }
+
+  Future<void> _asegurarPerfilUsuarioMinimo(User user) async {
+    final ref = _db.collection('usuarios').doc(user.uid);
+    final doc = await ref.get();
+    if (doc.exists) return;
+
+    await ref.set({
+      'uid': user.uid,
+      'nombre': '',
+      'apellido': '',
+      'email': (user.email ?? '').trim(),
+      'telefono': '',
+      'telefonoVerificado': false,
+      'estado': 1,
+      'creadoEn': FieldValue.serverTimestamp(),
+      'perfilIncompleto': true,
+    }, SetOptions(merge: true));
   }
 
   Future<void> cerrarSesion() {
