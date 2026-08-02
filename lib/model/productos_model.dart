@@ -7,8 +7,9 @@ class ProductosModel {
   String? id; // ID del documento en Firestore (nulo antes de guardarse)
   String nombreProducto;
   String descripcion;
-  String idCategoria; // ID de categoría (se agrega manual por ahora)
-  String idNegocio; // ID de tienda/negocio (se agrega manual por ahora)
+  String idCategoria; // ID de categoría
+  String idNegocio; // ID de tienda/negocio
+  String usuarioId; // ID del usuario autenticado
   String? codigoBarra; // Manual por ahora, opcional
   int estado; // 1 = activo, 0 = eliminado. Lo asigna el sistema, no el usuario.
   double stockMaximo;
@@ -27,6 +28,7 @@ class ProductosModel {
     required this.descripcion,
     required this.idCategoria,
     required this.idNegocio,
+    required this.usuarioId,
     this.codigoBarra,
     this.estado = 1,
     required this.stockMaximo,
@@ -48,6 +50,7 @@ class ProductosModel {
       descripcion: mapa['descripcion'] ?? '',
       idCategoria: mapa['idCategoria'] ?? '',
       idNegocio: mapa['idNegocio'] ?? '',
+      usuarioId: mapa['usuarioId']?.toString() ?? '',
       codigoBarra: mapa['codigoBarra'],
       estado: mapa['estado'] ?? 1,
       stockMaximo: (mapa['stockMaximo'] ?? 0).toDouble(),
@@ -71,6 +74,7 @@ class ProductosModel {
       'descripcion': descripcion,
       'idCategoria': idCategoria,
       'idNegocio': idNegocio,
+      'usuarioId': usuarioId,
       'codigoBarra': codigoBarra,
       'estado': estado,
       'stockMaximo': stockMaximo,
