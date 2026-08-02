@@ -16,6 +16,14 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
   final TextEditingController _busquedaController = TextEditingController();
   List<CategoriaModel> _categoriasFiltradas = [];
   bool _modoBusqueda = false;
+  List<Map<String, String>> _negociosUsuario = [];
+  String? _negocioSeleccionadoId;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarNegociosDelUsuario();
+  }
 
   @override
   void dispose() {
@@ -23,12 +31,62 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
     super.dispose();
   }
 
+  Future<void> _cargarNegociosDelUsuario() async {
+    try {
+      final negocios = await _service.obtenerNegociosDelUsuario();
+      if (!mounted) return;
+
+      setState(() {
+        _negociosUsuario = negocios;
+        if (negocios.isNotEmpty) {
+          final tieneSeleccionValida = _negocioSeleccionadoId != null &&
+              negocios.any((negocio) => negocio['id'] == _negocioSeleccionadoId);
+
+          if (!tieneSeleccionValida) {
+            _negocioSeleccionadoId = negocios.first['id'];
+          }
+        } else {
+          _negocioSeleccionadoId = null;
+        }
+      });
+    } finally {
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
   Future<void> _mostrarFormulario([CategoriaModel? categoria]) async {
+    if (_negociosUsuario.isEmpty) {
+      await _cargarNegociosDelUsuario();
+    }
+
+    if (!mounted) return;
+
+    if (_negociosUsuario.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Primero crea al menos un negocio para asignarle la categoría.'),
+        ),
+      );
+      return;
+    }
+
     final esEdicion = categoria != null;
     final nombreController = TextEditingController(text: categoria?.nombre ?? '');
-    final descripcionController = TextEditingController(text: categoria?.descripcion ?? '');
+    final descripcionController =
+        TextEditingController(text: categoria?.descripcion ?? '');
     final formKey = GlobalKey<FormState>();
     bool guardando = false;
+
+    String? negocioSeleccionado = categoria?.negocioId.isNotEmpty == true
+        ? categoria!.negocioId
+        : _negocioSeleccionadoId;
+
+    if (negocioSeleccionado == null ||
+        !_negociosUsuario.any((negocio) => negocio['id'] == negocioSeleccionado)) {
+      negocioSeleccionado = _negociosUsuario.first['id'];
+    }
 
     await showDialog(
       context: context,
@@ -44,6 +102,29 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      DropdownButtonFormField<String>(
+                        initialValue: negocioSeleccionado,
+                        decoration: const InputDecoration(
+                          labelText: 'Negocio',
+                          prefixIcon: Icon(Icons.storefront_outlined),
+                        ),
+                        items: _negociosUsuario.map((negocio) {
+                          return DropdownMenuItem<String>(
+                            value: negocio['id'],
+                            child: Text(negocio['nombre'] ?? 'Sin nombre'),
+                          );
+                        }).toList(),
+                        onChanged: (valor) {
+                          setStateDialogo(() => negocioSeleccionado = valor);
+                        },
+                        validator: (valor) {
+                          if (valor == null || valor.isEmpty) {
+                            return 'Selecciona un negocio';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
                       TextFormField(
                         controller: nombreController,
                         textCapitalization: TextCapitalization.words,
@@ -88,14 +169,24 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
                       ? null
                       : () async {
                           if (!formKey.currentState!.validate()) return;
+                          if (negocioSeleccionado == null || negocioSeleccionado!.isEmpty) {
+                            return;
+                          }
 
                           setStateDialogo(() => guardando = true);
+
+                          final negocioSeleccionadoDatos = _negociosUsuario.firstWhere(
+                            (negocio) => negocio['id'] == negocioSeleccionado,
+                            orElse: () => {'id': '', 'nombre': ''},
+                          );
 
                           final modelo = CategoriaModel(
                             id: categoria?.id,
                             nombre: nombreController.text.trim(),
                             descripcion: descripcionController.text.trim(),
-                            negocioId: widget.negocioId,
+                            negocioId: negocioSeleccionado!,
+                            negocioNombre: negocioSeleccionadoDatos['nombre'] ?? '',
+                            usuarioId: categoria?.usuarioId ?? '',
                           );
 
                           try {
@@ -377,7 +468,17 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
           categoria.nombre,
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        subtitle: Text(categoria.descripcion.isEmpty ? 'Sin descripcion' : categoria.descripcion),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(categoria.descripcion.isEmpty ? 'Sin descripcion' : categoria.descripcion),
+            if (categoria.negocioNombre.isNotEmpty)
+              Text(
+                'Negocio: ${categoria.negocioNombre}',
+                style: const TextStyle(color: Colors.grey),
+              ),
+          ],
+        ),
         trailing: PopupMenuButton<String>(
           onSelected: (valor) async {
             if (valor == 'editar') {
