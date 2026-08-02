@@ -40,7 +40,9 @@ class _RegistroNegocioScreenState extends State<RegistroNegocioScreen> {
 
       await FirebaseFirestore.instance.collection('negocios').doc(uid).set({
         'uid': uid,
+        'usuarioId': uid,
         'nombreNegocio': _nombreNegocioController.text.trim(),
+        'nombre': _nombreNegocioController.text.trim(),
         'direccion': _direccionController.text.trim(),
         'telefono': _telefonoController.text.trim(),
         'correo': _correoController.text.trim(),

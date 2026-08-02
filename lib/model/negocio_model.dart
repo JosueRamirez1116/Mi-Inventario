@@ -5,6 +5,7 @@ class NegocioModel {
   final String telefono;
   final String correo;
   final int estado;
+  final String usuarioId;
 
   const NegocioModel({
     this.id = '',
@@ -13,6 +14,7 @@ class NegocioModel {
     required this.telefono,
     required this.correo,
     this.estado = 1,
+    this.usuarioId = '',
   });
 
   factory NegocioModel.fromMap(String id, Map<String, dynamic> datos) {
@@ -23,6 +25,8 @@ class NegocioModel {
       telefono: datos['telefono']?.toString() ?? '',
       correo: datos['correo']?.toString() ?? '',
       estado: (datos['estado'] as num?)?.toInt() ?? 1,
+      usuarioId:
+          datos['usuarioId']?.toString() ?? datos['uid']?.toString() ?? '',
     );
   }
 
@@ -33,6 +37,7 @@ class NegocioModel {
       'telefono': telefono,
       'correo': correo,
       'estado': estado,
+      'usuarioId': usuarioId,
     };
   }
 
@@ -43,6 +48,7 @@ class NegocioModel {
     String? telefono,
     String? correo,
     int? estado,
+    String? usuarioId,
   }) {
     return NegocioModel(
       id: id ?? this.id,
@@ -51,6 +57,7 @@ class NegocioModel {
       telefono: telefono ?? this.telefono,
       correo: correo ?? this.correo,
       estado: estado ?? this.estado,
+      usuarioId: usuarioId ?? this.usuarioId,
     );
   }
 }
