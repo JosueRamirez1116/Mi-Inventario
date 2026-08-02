@@ -115,12 +115,52 @@ class AgregarProductosScreen extends GetView<ProductosController> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              sectionTitle('Negocio'),
+              sectionTitle('Negocio y categoría'),
               sectionCard([
-                TextFormField(
-                  controller: controller.controladorIdNegocio,
-                  style: fieldTextStyle,
-                  decoration: inputDecoration(labelText: 'ID de negocio'),
+                Obx(
+                  () => DropdownButtonFormField<String>(
+                    initialValue: controller.idNegocioSeleccionado.value.isEmpty
+                        ? null
+                        : controller.idNegocioSeleccionado.value,
+                    decoration: inputDecoration(labelText: 'Negocio'),
+                    items: controller.negociosUsuario.map((negocio) {
+                      return DropdownMenuItem<String>(
+                        value: negocio['id'],
+                        child: Text(negocio['nombre'] ?? 'Sin nombre'),
+                      );
+                    }).toList(),
+                    onChanged: (valor) async {
+                      if (valor == null) return;
+                      controller.idNegocioSeleccionado.value = valor;
+                      await controller.cargarCategoriasDelNegocio(valor);
+                    },
+                    validator: (valor) => valor == null || valor.isEmpty
+                        ? 'Selecciona un negocio'
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Obx(
+                  () => DropdownButtonFormField<String>(
+                    initialValue: controller.idCategoriaSeleccionada.value.isEmpty
+                        ? null
+                        : controller.idCategoriaSeleccionada.value,
+                    decoration: inputDecoration(labelText: 'Categoría'),
+                    items: controller.categoriasNegocio.map((categoria) {
+                      return DropdownMenuItem<String>(
+                        value: categoria['id'],
+                        child: Text(categoria['nombre'] ?? 'Sin nombre'),
+                      );
+                    }).toList(),
+                    onChanged: (valor) {
+                      if (valor != null) {
+                        controller.idCategoriaSeleccionada.value = valor;
+                      }
+                    },
+                    validator: (valor) => valor == null || valor.isEmpty
+                        ? 'Selecciona una categoría'
+                        : null,
+                  ),
                 ),
               ]),
               const SizedBox(height: 16),
@@ -147,12 +187,7 @@ class AgregarProductosScreen extends GetView<ProductosController> {
                   decoration: inputDecoration(labelText: 'Código de producto'),
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
-                  controller: controller.controladorIdCategoria,
-                  style: fieldTextStyle,
-                  decoration: inputDecoration(labelText: 'ID de categoría'),
-                ),
-                const SizedBox(height: 12),
+
                 TextFormField(
                   controller: controller.controladorCodigoBarra,
                   style: fieldTextStyle,
