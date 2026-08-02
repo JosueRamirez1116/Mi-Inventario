@@ -1,19 +1,34 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'categoria_model.dart';
 
 class CategoriaService {
   final CollectionReference _categoriasRef =
       FirebaseFirestore.instance.collection('categorias');
 
+  String? _uidActual() => FirebaseAuth.instance.currentUser?.uid;
+
+  String _negocioIdSeguro(String negocioId) {
+    final uid = _uidActual();
+    if (negocioId.isNotEmpty && negocioId != 'default') {
+      return negocioId;
+    }
+    return uid ?? '';
+  }
+
   // ---------- AGREGAR ----------
   Future<void> agregarCategoria(CategoriaModel categoria) async {
-    await _categoriasRef.add(categoria.toMap());
+    final datos = categoria.toMap();
+    datos['negocioId'] = _negocioIdSeguro(categoria.negocioId);
+    await _categoriasRef.add(datos);
   }
 
   // ---------- MODIFICAR ----------
   Future<void> modificarCategoria(CategoriaModel categoria) async {
     if (categoria.id == null) return;
-    await _categoriasRef.doc(categoria.id).update(categoria.toMap());
+    final datos = categoria.toMap();
+    datos['negocioId'] = _negocioIdSeguro(categoria.negocioId);
+    await _categoriasRef.doc(categoria.id).update(datos);
   }
 
   // ---------- ELIMINAR (borrado lógico, estado = 0) ----------
@@ -23,8 +38,10 @@ class CategoriaService {
 
   // ---------- LISTAR (solo activas, filtradas por negocio) ----------
   Stream<List<CategoriaModel>> obtenerCategorias(String negocioId) {
+    final negocioIdSeguro = _negocioIdSeguro(negocioId);
+
     return _categoriasRef
-        .where('negocioId', isEqualTo: negocioId)
+        .where('negocioId', isEqualTo: negocioIdSeguro)
         .where('estado', isEqualTo: 1)
         .snapshots()
         .map((snapshot) => snapshot.docs
@@ -34,13 +51,11 @@ class CategoriaService {
   }
 
   // ---------- BUSCAR POR NOMBRE ----------
-  // Firestore no soporta "contains" nativo, así que traemos las activas
-  // del negocio y filtramos localmente (suficiente para un catálogo de categorías,
-  // que normalmente no tiene miles de registros).
   Future<List<CategoriaModel>> buscarPorNombre(
       String negocioId, String texto) async {
+    final negocioIdSeguro = _negocioIdSeguro(negocioId);
     final snapshot = await _categoriasRef
-        .where('negocioId', isEqualTo: negocioId)
+        .where('negocioId', isEqualTo: negocioIdSeguro)
         .where('estado', isEqualTo: 1)
         .get();
 
