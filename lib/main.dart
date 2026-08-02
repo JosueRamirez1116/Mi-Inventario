@@ -5,6 +5,8 @@ import 'package:mi_inventario/auth/services/auth_service.dart';
 import 'package:mi_inventario/login/login_screen.dart';
 import 'package:mi_inventario/view/dashboard_screen.dart';
 import 'package:mi_inventario/configuracion/perfil_usuario_screen.dart';
+import 'package:mi_inventario/Categorias/categoria_screen.dart'
+    as categorias_screen;
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -116,7 +118,8 @@ class HomeScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => CategoriaScreen(negocioId: uid),
+                      builder: (_) =>
+                          categorias_screen.CategoriaScreen(negocioId: uid),
                     ),
                   );
                 },
