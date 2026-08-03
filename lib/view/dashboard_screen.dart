@@ -6,6 +6,7 @@ import 'package:mi_inventario/controller/productos_controller.dart';
 import 'package:mi_inventario/model/dashboard_model.dart';
 import 'package:mi_inventario/view/negocios/negocios_screen.dart';
 import 'package:mi_inventario/view/productos/agregar_productos_screen.dart';
+import 'package:mi_inventario/view/inventario/inventario_screen.dart';
 import 'package:get/get.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -40,6 +41,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           context,
           MaterialPageRoute(builder: (_) => const AgregarProductosScreen()),
         );
+        break;
+      case 'Inventario':
+        Get.to(() => const InventarioScreen());
         break;
       case 'Categorias':
       case 'Categorías':
