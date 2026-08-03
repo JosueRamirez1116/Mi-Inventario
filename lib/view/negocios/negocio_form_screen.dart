@@ -79,6 +79,7 @@ class _NegocioFormScreenState extends State<NegocioFormScreen> {
       telefono: _telefonoController.text.trim(),
       correo: _correoController.text.trim(),
       estado: widget.negocio?.estado ?? 1,
+      usuarioId: widget.negocio?.usuarioId ?? '',
     );
 
     try {

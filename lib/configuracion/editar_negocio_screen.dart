@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mi_inventario/auth/services/auth_service.dart';
@@ -145,7 +144,7 @@ class _EditarNegocioScreenState extends State<EditarNegocioScreen> {
       setState(() => _error = _mensajeError(e.code));
     } on FirebaseException catch (e) {
       setState(() => _error = _mensajeError(e.code));
-    } on Exception catch (e) {
+    } on Exception catch (_) {
       setState(
         () => _error = 'No se pudo guardar el negocio. Intenta de nuevo.',
       );

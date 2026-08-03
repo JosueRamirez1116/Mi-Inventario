@@ -4,6 +4,8 @@ class CategoriaModel {
   final String descripcion;
   final int estado; // 1 = activo, 0 = eliminado (borrado lógico)
   final String negocioId; // a qué negocio pertenece la categoría
+  final String negocioNombre; // nombre visible del negocio asociado
+  final String usuarioId; // a qué usuario pertenece la categoría
 
   CategoriaModel({
     this.id,
@@ -11,6 +13,8 @@ class CategoriaModel {
     required this.descripcion,
     this.estado = 1,
     required this.negocioId,
+    this.negocioNombre = '',
+    this.usuarioId = '',
   });
 
   // Convertir de Firestore -> Objeto Dart
@@ -21,6 +25,8 @@ class CategoriaModel {
       descripcion: data['descripcion'] ?? '',
       estado: data['estado'] ?? 1,
       negocioId: data['negocioId'] ?? '',
+      negocioNombre: data['negocioNombre']?.toString() ?? '',
+      usuarioId: data['usuarioId']?.toString() ?? '',
     );
   }
 
@@ -31,6 +37,8 @@ class CategoriaModel {
       'descripcion': descripcion,
       'estado': estado,
       'negocioId': negocioId,
+      'negocioNombre': negocioNombre,
+      'usuarioId': usuarioId,
     };
   }
 
@@ -39,13 +47,18 @@ class CategoriaModel {
     String? nombre,
     String? descripcion,
     int? estado,
+    String? negocioId,
+    String? negocioNombre,
+    String? usuarioId,
   }) {
     return CategoriaModel(
       id: id,
       nombre: nombre ?? this.nombre,
       descripcion: descripcion ?? this.descripcion,
       estado: estado ?? this.estado,
-      negocioId: negocioId,
+      negocioId: negocioId ?? this.negocioId,
+      negocioNombre: negocioNombre ?? this.negocioNombre,
+      usuarioId: usuarioId ?? this.usuarioId,
     );
   }
 }

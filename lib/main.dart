@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:get/get.dart';
 import 'package:mi_inventario/auth/services/auth_service.dart';
-import 'package:mi_inventario/configuracion/perfil_usuario_screen.dart';
-import 'package:mi_inventario/controller/productos_controller.dart';
 import 'package:mi_inventario/login/login_screen.dart';
 import 'package:mi_inventario/view/dashboard_screen.dart';
-import 'package:mi_inventario/Categorias/categoria_screen.dart';
+import 'package:mi_inventario/configuracion/perfil_usuario_screen.dart';
+import 'package:mi_inventario/Categorias/categoria_screen.dart'
+    as categorias_screen;
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -16,9 +16,9 @@ Future<void> main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-  } catch (_) {}
-
-  Get.put(ProductosController());
+  } catch (e) {
+    debugPrint('Error inicializando Firebase: $e');
+  }
 
   runApp(const MyApp());
 }
@@ -118,7 +118,8 @@ class HomeScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => CategoriaScreen(negocioId: uid),
+                      builder: (_) =>
+                          categorias_screen.CategoriaScreen(negocioId: uid),
                     ),
                   );
                 },
