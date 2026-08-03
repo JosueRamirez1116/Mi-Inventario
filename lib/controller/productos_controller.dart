@@ -11,6 +11,8 @@ import 'package:mi_inventario/model/productos_model.dart';
 class ProductosController extends GetxController {
   final CollectionReference<Map<String, dynamic>> _referenciaProductos =
       FirebaseFirestore.instance.collection('productos');
+  final CollectionReference<Map<String, dynamic>> _referenciaMovimientos =
+      FirebaseFirestore.instance.collection('movimientos');
 
   final formularioKey = GlobalKey<FormState>();
 
@@ -30,7 +32,7 @@ class ProductosController extends GetxController {
   final RxBool estaGuardando = false.obs;
 
   /// Valida el formulario y guarda el nuevo producto en Firestore.
-  Future<void> guardarProducto() async {
+  Future<void> guardarProducto({String? productoId}) async {
     if (!formularioKey.currentState!.validate()) return;
 
     final stockMaximo = double.parse(controladorStockMaximo.text.trim());
@@ -66,12 +68,21 @@ class ProductosController extends GetxController {
         fechaCreacion: DateTime.now(),
       );
 
-      await _referenciaProductos.add(nuevoProducto.aMapa());
+      if (productoId == null) {
+        await _referenciaProductos.add(nuevoProducto.aMapa());
+      } else {
+        await _referenciaProductos.doc(productoId).update({
+          ...nuevoProducto.aMapa(),
+          'fechaActualizacion': FieldValue.serverTimestamp(),
+        });
+      }
 
       Get.back(result: true);
       Get.snackbar(
-        'Producto agregado',
-        'El producto se guardó correctamente',
+        productoId == null ? 'Producto agregado' : 'Producto actualizado',
+        productoId == null
+            ? 'El producto se guardó correctamente'
+            : 'El producto se actualizó correctamente',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: const Color(0xFF059669),
         colorText: Colors.white,
@@ -101,6 +112,96 @@ class ProductosController extends GetxController {
       return 'Ingrese un número válido';
     }
     return null;
+  }
+
+  void limpiarFormulario() {
+    controladorNombre.clear();
+    controladorDescripcion.clear();
+    controladorIdCategoria.clear();
+    controladorIdNegocio.clear();
+    controladorCodigoBarra.clear();
+    controladorCodigoProducto.clear();
+    controladorStockMaximo.clear();
+    controladorStockMinimo.clear();
+    controladorUnidadMedida.clear();
+    controladorStockActual.clear();
+    controladorPrecioCompra.clear();
+    controladorPrecioVenta.clear();
+  }
+
+  void cargarProductoEnFormulario(ProductosModel producto) {
+    controladorNombre.text = producto.nombreProducto;
+    controladorDescripcion.text = producto.descripcion;
+    controladorIdCategoria.text = producto.idCategoria;
+    controladorIdNegocio.text = producto.idNegocio;
+    controladorCodigoBarra.text = producto.codigoBarra ?? '';
+    controladorCodigoProducto.text = producto.codigoProducto;
+    controladorStockMaximo.text = producto.stockMaximo.toString();
+    controladorStockMinimo.text = producto.stockMinimo.toString();
+    controladorUnidadMedida.text = producto.unidadMedida;
+    controladorStockActual.text = producto.stockActual.toString();
+    controladorPrecioCompra.text = producto.precioCompra.toString();
+    controladorPrecioVenta.text = producto.precioVenta.toString();
+  }
+
+  Future<void> eliminarProducto(String productoId) async {
+    await _referenciaProductos.doc(productoId).update({
+      'estado': 0,
+      'fechaActualizacion': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> registrarMovimiento({
+    required ProductosModel producto,
+    required String tipoMovimiento,
+    required double cantidad,
+  }) async {
+    if (producto.id == null || producto.id!.isEmpty) {
+      throw Exception('El producto no tiene un identificador válido');
+    }
+
+    final productoId = producto.id!;
+    final docProducto = _referenciaProductos.doc(productoId);
+
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+      final snapshotProducto = await transaction.get(docProducto);
+      if (!snapshotProducto.exists) {
+        throw Exception('El producto ya no existe');
+      }
+
+      final datosProducto = snapshotProducto.data() ?? <String, dynamic>{};
+      final stockActual = (datosProducto['stockActual'] as num?)?.toDouble() ?? 0;
+
+      if (tipoMovimiento == 'Salida' && cantidad > stockActual) {
+        throw Exception(
+          'No hay stock suficiente. Stock actual: ${stockActual.toStringAsFixed(2)}',
+        );
+      }
+
+      final nuevoStock = tipoMovimiento == 'Entrada'
+          ? stockActual + cantidad
+          : stockActual - cantidad;
+
+      transaction.update(docProducto, {
+        'stockActual': nuevoStock,
+        'fechaActualizacion': FieldValue.serverTimestamp(),
+      });
+
+      final docMovimiento = _referenciaMovimientos.doc();
+      transaction.set(docMovimiento, {
+        'idProducto': snapshotProducto.id,
+        'nombreProducto': datosProducto['nombreProducto'] ?? '',
+        'codigoProducto': datosProducto['codigoProducto'] ?? '',
+        'idCategoria': datosProducto['idCategoria'] ?? '',
+        'idNegocio': datosProducto['idNegocio'] ?? '',
+        'tipoMovimiento': tipoMovimiento,
+        'cantidad': cantidad,
+        'stockAnterior': stockActual,
+        'stockNuevo': nuevoStock,
+        'estado': 1,
+        'fechaMovimiento': FieldValue.serverTimestamp(),
+      });
+    });
   }
 
   @override
