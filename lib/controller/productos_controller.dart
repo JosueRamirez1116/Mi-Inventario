@@ -12,7 +12,7 @@ import 'package:mi_inventario/model/productos_model.dart';
 class ProductosController extends GetxController {
   CollectionReference<Map<String, dynamic>> get _referenciaProductos =>
       FirebaseFirestore.instance.collection('productos');
-  final CollectionReference<Map<String, dynamic>> _referenciaMovimientos =
+  CollectionReference<Map<String, dynamic>> get _referenciaMovimientos =>
       FirebaseFirestore.instance.collection('movimientos');
 
   final formularioKey = GlobalKey<FormState>();
@@ -227,26 +227,10 @@ class ProductosController extends GetxController {
     return null;
   }
 
-  void limpiarFormulario() {
-    controladorNombre.clear();
-    controladorDescripcion.clear();
-    controladorIdCategoria.clear();
-    controladorIdNegocio.clear();
-    controladorCodigoBarra.clear();
-    controladorCodigoProducto.clear();
-    controladorStockMaximo.clear();
-    controladorStockMinimo.clear();
-    controladorUnidadMedida.clear();
-    controladorStockActual.clear();
-    controladorPrecioCompra.clear();
-    controladorPrecioVenta.clear();
-  }
-
-  void cargarProductoEnFormulario(ProductosModel producto) {
+  /// Carga los datos de un producto existente en el formulario para su edición.
+  Future<void> cargarProductoEnFormulario(ProductosModel producto) async {
     controladorNombre.text = producto.nombreProducto;
     controladorDescripcion.text = producto.descripcion;
-    controladorIdCategoria.text = producto.idCategoria;
-    controladorIdNegocio.text = producto.idNegocio;
     controladorCodigoBarra.text = producto.codigoBarra ?? '';
     controladorCodigoProducto.text = producto.codigoProducto;
     controladorStockMaximo.text = producto.stockMaximo.toString();
@@ -255,6 +239,10 @@ class ProductosController extends GetxController {
     controladorStockActual.text = producto.stockActual.toString();
     controladorPrecioCompra.text = producto.precioCompra.toString();
     controladorPrecioVenta.text = producto.precioVenta.toString();
+
+    idNegocioSeleccionado.value = producto.idNegocio;
+    await cargarCategoriasDelNegocio(producto.idNegocio);
+    idCategoriaSeleccionada.value = producto.idCategoria;
   }
 
   Future<void> eliminarProducto(String productoId) async {
