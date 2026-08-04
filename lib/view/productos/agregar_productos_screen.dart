@@ -1,10 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mi_inventario/controller/productos_controller.dart';
+import 'package:mi_inventario/model/productos_model.dart';
 
 /// Pantalla para ingresar los datos de un nuevo producto.
-class AgregarProductosScreen extends GetView<ProductosController> {
-  const AgregarProductosScreen({super.key});
+class AgregarProductosScreen extends StatefulWidget {
+  const AgregarProductosScreen({super.key, this.producto});
+
+  final ProductosModel? producto;
+
+  @override
+  State<AgregarProductosScreen> createState() => _AgregarProductosScreenState();
+}
+
+class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
+  late final ProductosController controller;
+
+  bool get _esEdicion => widget.producto != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (Get.isRegistered<ProductosController>()) {
+      controller = Get.find<ProductosController>();
+    } else {
+      controller = Get.put(ProductosController());
+    }
+
+    if (_esEdicion) {
+      controller.cargarProductoEnFormulario(widget.producto!);
+    } else {
+      controller.limpiarFormulario();
+    }
+  }
+
+  @override
+  void dispose() {
+    controller.limpiarFormulario();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,8 +121,8 @@ class AgregarProductosScreen extends GetView<ProductosController> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Agregar producto',
+        title: Text(
+          _esEdicion ? 'Editar producto' : 'Agregar producto',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
         ),
         backgroundColor: appBarColor,
@@ -101,10 +135,12 @@ class AgregarProductosScreen extends GetView<ProductosController> {
           Obx(
             () => IconButton(
               icon: const Icon(Icons.save),
-              tooltip: 'Guardar producto',
+              tooltip: _esEdicion ? 'Actualizar producto' : 'Guardar producto',
               onPressed: controller.estaGuardando.value
                   ? null
-                  : controller.guardarProducto,
+                  : () => controller.guardarProducto(
+                      productoId: widget.producto?.id,
+                    ),
             ),
           ),
         ],
@@ -318,7 +354,9 @@ class AgregarProductosScreen extends GetView<ProductosController> {
                       : const Text('Guardar producto'),
                   onPressed: controller.estaGuardando.value
                       ? null
-                      : controller.guardarProducto,
+                      : () => controller.guardarProducto(
+                          productoId: widget.producto?.id,
+                        ),
                 ),
               ),
             ],

@@ -1,7 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:mi_inventario/controller/productos_controller.dart';
+import 'package:mi_inventario/model/productos_model.dart';
+import 'package:mi_inventario/view/productos/agregar_productos_screen.dart';
 
+/// Filtra una lista de productos (representados como mapas) por coincidencia
+/// parcial en el nombre. Se mantiene aquí para compatibilidad con pruebas
+/// existentes que validan esta lógica de forma aislada.
 List<Map<String, dynamic>> filtrarProductosPorNombre(
   List<Map<String, dynamic>> productos,
   String texto,
@@ -25,19 +31,23 @@ class InventarioScreen extends StatefulWidget {
 }
 
 class _InventarioScreenState extends State<InventarioScreen> {
-  final TextEditingController _busquedaController = TextEditingController();
-  final Color _appBarColor = const Color(0xFF4338CA);
+  static const Color _colorPrincipal = Color.fromARGB(255, 28, 83, 170);
 
-  List<Map<String, String>> _negociosUsuario = [];
-  List<Map<String, dynamic>> _productos = [];
-  List<Map<String, dynamic>> _productosFiltrados = [];
-  String? _negocioSeleccionadoId;
-  bool _cargando = true;
+  late final ProductosController _controller;
+  final TextEditingController _busquedaController = TextEditingController();
+
+  String _textoBusqueda = '';
+  String _filtroCategoriaId = '';
+  String _filtroNegocioId = '';
 
   @override
   void initState() {
     super.initState();
-    _cargarNegociosDelUsuario();
+    if (Get.isRegistered<ProductosController>()) {
+      _controller = Get.find<ProductosController>();
+    } else {
+      _controller = Get.put(ProductosController());
+    }
   }
 
   @override
@@ -46,355 +56,590 @@ class _InventarioScreenState extends State<InventarioScreen> {
     super.dispose();
   }
 
-  Future<void> _cargarNegociosDelUsuario() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null || uid.isEmpty) {
-      if (mounted) {
-        setState(() => _cargando = false);
-      }
-      return;
-    }
-
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('negocios')
-          .where('usuarioId', isEqualTo: uid)
-          .where('estado', isEqualTo: 1)
-          .get();
-
-      final negocios = snapshot.docs.map((doc) {
-        final datos = doc.data();
-        final nombre =
-            datos['nombre']?.toString() ??
-            datos['nombreNegocio']?.toString() ??
-            'Sin nombre';
-        return {'id': doc.id, 'nombre': nombre};
-      }).toList();
-
-      if (!mounted) return;
-
-      setState(() {
-        _negociosUsuario = negocios
-            .map(
-              (negocio) => {
-                'id': negocio['id'] ?? '',
-                'nombre': negocio['nombre'] ?? 'Sin nombre',
-              },
-            )
-            .toList();
-
-        if (_negociosUsuario.isNotEmpty) {
-          if (_negocioSeleccionadoId == null ||
-              !_negociosUsuario.any(
-                (negocio) => negocio['id'] == _negocioSeleccionadoId,
-              )) {
-            _negocioSeleccionadoId = _negociosUsuario.first['id'];
-          }
-        } else {
-          _negocioSeleccionadoId = null;
-        }
-      });
-
-      if (_negocioSeleccionadoId != null &&
-          _negocioSeleccionadoId!.isNotEmpty) {
-        await _cargarProductosDelNegocio(_negocioSeleccionadoId!);
-      } else {
-        if (mounted) {
-          setState(() {
-            _productos = [];
-            _productosFiltrados = [];
-            _cargando = false;
-          });
-        }
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _cargando = false);
-      }
-    }
+  Stream<QuerySnapshot<Map<String, dynamic>>> get _streamProductos {
+    return FirebaseFirestore.instance
+        .collection('productos')
+        .where('estado', isEqualTo: 1)
+        .snapshots();
   }
 
-  Future<void> _cargarProductosDelNegocio(String negocioId) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null || uid.isEmpty) {
-      if (mounted) {
-        setState(() {
-          _productos = [];
-          _productosFiltrados = [];
-          _cargando = false;
-        });
-      }
-      return;
-    }
-
-    setState(() => _cargando = true);
-
-    try {
-      final productosSnapshot = await FirebaseFirestore.instance
-          .collection('productos')
-          .where('usuarioId', isEqualTo: uid)
-          .where('idNegocio', isEqualTo: negocioId)
-          .where('estado', isEqualTo: 1)
-          .get();
-
-      final categoriasSnapshot = await FirebaseFirestore.instance
-          .collection('categorias')
-          .where('usuarioId', isEqualTo: uid)
-          .where('estado', isEqualTo: 1)
-          .get();
-
-      final categoriasPorId = <String, String>{};
-      for (final doc in categoriasSnapshot.docs) {
-        final datos = doc.data();
-        categoriasPorId[doc.id] =
-            datos['nombre']?.toString() ?? 'Sin categoría';
-      }
-
-      final productos = productosSnapshot.docs.map((doc) {
-        final datos = doc.data();
-        final categoriaId = datos['idCategoria']?.toString() ?? '';
-        return {
-          'id': doc.id,
-          'nombreProducto': datos['nombreProducto']?.toString() ?? 'Sin nombre',
-          'stockActual': (datos['stockActual'] ?? 0).toDouble(),
-          'idCategoria': categoriaId,
-          'categoriaNombre': categoriasPorId[categoriaId] ?? 'Sin categoría',
-          'fotoProducto': datos['fotoProducto']?.toString() ?? '',
-        };
-      }).toList();
-
-      if (!mounted) return;
-
-      setState(() {
-        _productos = productos;
-        _productosFiltrados = filtrarProductosPorNombre(
-          productos,
-          _busquedaController.text,
-        );
-        _cargando = false;
-      });
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _productos = [];
-          _productosFiltrados = [];
-          _cargando = false;
-        });
-      }
-    }
+  Stream<QuerySnapshot<Map<String, dynamic>>> get _streamCategorias {
+    return FirebaseFirestore.instance
+        .collection('categorias')
+        .where('estado', isEqualTo: 1)
+        .snapshots();
   }
 
-  void _aplicarFiltro(String texto) {
-    setState(() {
-      _productosFiltrados = filtrarProductosPorNombre(_productos, texto);
-    });
+  Stream<QuerySnapshot<Map<String, dynamic>>> get _streamNegocios {
+    return FirebaseFirestore.instance
+        .collection('negocios')
+        .where('estado', isEqualTo: 1)
+        .snapshots();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F4FA),
-      appBar: AppBar(
-        title: const Text(
-          'Inventario',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-        ),
-        backgroundColor: _appBarColor,
-        foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+  Future<void> _abrirFormularioRegistro() async {
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const AgregarProductosScreen()),
+    );
+  }
+
+  Future<void> _abrirFormularioEdicion(ProductosModel producto) async {
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AgregarProductosScreen(producto: producto),
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  Future<void> _confirmarEliminacion(ProductosModel producto) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Eliminar producto'),
+          content: Text('¿Deseas eliminar "${producto.nombreProducto}"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmar != true) {
+      return;
+    }
+
+    try {
+      await _controller.eliminarProducto(producto.id!);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Producto eliminado correctamente'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo eliminar el producto: $error')),
+      );
+    }
+  }
+
+  Future<void> _mostrarDialogoMovimiento(ProductosModel producto) async {
+    String tipoMovimiento = 'Entrada';
+    final cantidadController = TextEditingController();
+    bool guardando = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Registrar movimiento'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'Selecciona una tienda',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.grey[800],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: _negocioSeleccionadoId,
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: _appBarColor, width: 2),
-                      ),
-                    ),
-                    items: _negociosUsuario.map((negocio) {
-                      return DropdownMenuItem<String>(
-                        value: negocio['id'],
-                        child: Text(negocio['nombre'] ?? 'Sin nombre'),
-                      );
-                    }).toList(),
-                    onChanged: (valor) async {
-                      if (valor == null) return;
-                      setState(() => _negocioSeleccionadoId = valor);
-                      await _cargarProductosDelNegocio(valor);
-                    },
+                    key: ValueKey('mov-$tipoMovimiento'),
+                    initialValue: tipoMovimiento,
+                    decoration: const InputDecoration(labelText: 'Tipo'),
+                    items: const [
+                      DropdownMenuItem(value: 'Entrada', child: Text('Entrada')),
+                      DropdownMenuItem(value: 'Salida', child: Text('Salida')),
+                    ],
+                    onChanged: guardando
+                        ? null
+                        : (value) {
+                            if (value == null) {
+                              return;
+                            }
+                            setDialogState(() => tipoMovimiento = value);
+                          },
                   ),
                   const SizedBox(height: 12),
-                  TextField(
-                    controller: _busquedaController,
-                    onChanged: _aplicarFiltro,
-                    decoration: InputDecoration(
-                      hintText: 'Buscar por nombre',
-                      prefixIcon: const Icon(Icons.search),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: _appBarColor, width: 2),
-                      ),
+                  TextFormField(
+                    controller: cantidadController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Cantidad',
+                      hintText: 'Ingresa una cantidad mayor a 0',
                     ),
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              child: _cargando
-                  ? const Center(child: CircularProgressIndicator())
-                  : _negociosUsuario.isEmpty
-                  ? _buildEstadoVacio(
-                      'Aún no hay tiendas registradas para este usuario.',
-                    )
-                  : _productosFiltrados.isEmpty
-                  ? _buildEstadoVacio(
-                      'No se encontraron productos para esta tienda.',
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                      itemCount: _productosFiltrados.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        final producto = _productosFiltrados[index];
-                        return Card(
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Row(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(14),
-                                  child: SizedBox(
-                                    width: 56,
-                                    height: 56,
-                                    child: Image.network(
-                                      producto['fotoProducto']
-                                                  ?.toString()
-                                                  .isNotEmpty ==
-                                              true
-                                          ? producto['fotoProducto'].toString()
-                                          : 'https://placehold.co/120x120/png?text=Producto',
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                            return Container(
-                                              color: const Color(0xFFEEF2FF),
-                                              child: const Icon(
-                                                Icons.inventory_2_outlined,
-                                                color: Color(0xFF4338CA),
-                                                size: 28,
-                                              ),
-                                            );
-                                          },
-                                    ),
-                                  ),
+              actions: [
+                TextButton(
+                  onPressed: guardando
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton.icon(
+                  onPressed: guardando
+                      ? null
+                      : () async {
+                          final cantidad = double.tryParse(
+                            cantidadController.text.trim(),
+                          );
+                          if (cantidad == null || cantidad <= 0) {
+                            ScaffoldMessenger.of(dialogContext).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Ingresa una cantidad numérica mayor a 0',
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        producto['nombreProducto']
-                                                ?.toString() ??
-                                            'Sin nombre',
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Stock actual: ${producto['stockActual']}',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Categoría: ${producto['categoriaNombre']}',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          setDialogState(() => guardando = true);
+                          try {
+                            await _controller.registrarMovimiento(
+                              producto: producto,
+                              tipoMovimiento: tipoMovimiento,
+                              cantidad: cantidad,
+                            );
+
+                            if (!dialogContext.mounted) {
+                              return;
+                            }
+                            Navigator.of(dialogContext).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Movimiento $tipoMovimiento registrado',
                                 ),
-                              ],
-                            ),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } catch (error) {
+                            setDialogState(() => guardando = false);
+                            ScaffoldMessenger.of(dialogContext).showSnackBar(
+                              SnackBar(content: Text('No se pudo guardar: $error')),
+                            );
+                          }
+                        },
+                  icon: const Icon(Icons.save),
+                  label: guardando
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
                           ),
-                        );
-                      },
-                    ),
+                        )
+                      : const Text('Guardar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    cantidadController.dispose();
+  }
+
+  Future<void> _mostrarDetalleProducto(
+    ProductosModel producto,
+    Map<String, String> categoriasPorId,
+    Map<String, String> negociosPorId,
+  ) async {
+    final nombreCategoria = categoriasPorId[producto.idCategoria] ?? 'Sin categoría';
+    final nombreNegocio = negociosPorId[producto.idNegocio] ?? 'Sin negocio';
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(producto.nombreProducto),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _info('Código', producto.codigoProducto),
+                _info('Categoría', nombreCategoria),
+                _info('Negocio', nombreNegocio),
+                _info('Stock actual', producto.stockActual.toStringAsFixed(2)),
+                _info('Unidad', producto.unidadMedida),
+                _info('Precio compra', producto.precioCompra.toStringAsFixed(2)),
+                _info('Precio venta', producto.precioVenta.toStringAsFixed(2)),
+                _info('Descripción', producto.descripcion),
+              ],
             ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cerrar'),
+            ),
+            TextButton.icon(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _abrirFormularioEdicion(producto);
+              },
+              icon: const Icon(Icons.edit),
+              label: const Text('Modificar'),
+            ),
+            TextButton.icon(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _mostrarDialogoMovimiento(producto);
+              },
+              icon: const Icon(Icons.swap_horiz),
+              label: const Text('Entrada / Salida'),
+            ),
+            TextButton.icon(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _confirmarEliminacion(producto);
+              },
+              icon: const Icon(Icons.delete),
+              label: const Text('Eliminar'),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _info(String etiqueta, String valor) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(color: Colors.black87, fontSize: 14),
+          children: [
+            TextSpan(
+              text: '$etiqueta: ',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            TextSpan(text: valor),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildEstadoVacio(String mensaje) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.inventory_2_outlined,
-              size: 56,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              mensaje,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 15, color: Colors.grey[700]),
-            ),
-          ],
-        ),
+  Widget _buildFotoProducto(String fotoUrl) {
+    if (fotoUrl.trim().isEmpty) {
+      return const CircleAvatar(
+        radius: 24,
+        backgroundColor: Color(0xFFE2E8F0),
+        child: Icon(Icons.image_not_supported, color: Colors.grey),
+      );
+    }
+
+    return CircleAvatar(
+      radius: 24,
+      backgroundColor: const Color(0xFFE2E8F0),
+      backgroundImage: NetworkImage(fotoUrl),
+      onBackgroundImageError: (_, __) {},
+      child: fotoUrl.isEmpty
+          ? const Icon(Icons.broken_image, color: Colors.grey)
+          : null,
+    );
+  }
+
+  List<ProductosModel> _aplicarFiltros({
+    required List<ProductosModel> productos,
+    required Map<String, String> categoriasPorId,
+  }) {
+    final busqueda = _textoBusqueda.trim().toLowerCase();
+
+    return productos.where((producto) {
+      if (_filtroCategoriaId.isNotEmpty && producto.idCategoria != _filtroCategoriaId) {
+        return false;
+      }
+
+      if (_filtroNegocioId.isNotEmpty && producto.idNegocio != _filtroNegocioId) {
+        return false;
+      }
+
+      if (busqueda.isEmpty) {
+        return true;
+      }
+
+      final categoriaNombre =
+          (categoriasPorId[producto.idCategoria] ?? '').toLowerCase();
+
+      final coincideCodigo = producto.codigoProducto.toLowerCase().contains(busqueda);
+      final coincideNombre = producto.nombreProducto.toLowerCase().contains(busqueda);
+      final coincideCategoria = categoriaNombre.contains(busqueda);
+
+      return coincideCodigo || coincideNombre || coincideCategoria;
+    }).toList();
+  }
+
+  void _limpiarFiltros() {
+    setState(() {
+      _textoBusqueda = '';
+      _filtroCategoriaId = '';
+      _filtroNegocioId = '';
+      _busquedaController.clear();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 248, 244, 250),
+      appBar: AppBar(
+        title: const Text('Consulta del Inventario'),
+        backgroundColor: _colorPrincipal,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            tooltip: 'Agregar producto',
+            onPressed: _abrirFormularioRegistro,
+            icon: const Icon(Icons.add),
+          ),
+        ],
+      ),
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: _streamCategorias,
+        builder: (context, categoriasSnapshot) {
+          if (categoriasSnapshot.hasError) {
+            return const Center(
+              child: Text('No se pudieron cargar las categorías'),
+            );
+          }
+
+          final categoriasDocs = categoriasSnapshot.data?.docs ?? [];
+          final categoriasPorId = <String, String>{
+            for (final categoria in categoriasDocs)
+              categoria.id: (categoria.data()['nombre'] ?? '').toString(),
+          };
+
+          return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: _streamNegocios,
+            builder: (context, negociosSnapshot) {
+              if (negociosSnapshot.hasError) {
+                return const Center(
+                  child: Text('No se pudieron cargar los negocios'),
+                );
+              }
+
+              final negociosDocs = negociosSnapshot.data?.docs ?? [];
+              final negociosPorId = <String, String>{
+                for (final negocio in negociosDocs)
+                  negocio.id: (negocio.data()['nombre'] ?? '').toString(),
+              };
+
+              return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: _streamProductos,
+                builder: (context, productosSnapshot) {
+                  if (productosSnapshot.hasError) {
+                    return const Center(
+                      child: Text('No se pudieron cargar los productos'),
+                    );
+                  }
+
+                  if (!productosSnapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final productos = productosSnapshot.data!.docs.map((doc) {
+                    return ProductosModel.desdeMapa(doc.data(), doc.id);
+                  }).toList()
+                    ..sort(
+                      (a, b) => a.nombreProducto.toLowerCase().compareTo(
+                        b.nombreProducto.toLowerCase(),
+                      ),
+                    );
+
+                  final productosFiltrados = _aplicarFiltros(
+                    productos: productos,
+                    categoriasPorId: categoriasPorId,
+                  );
+
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        child: Column(
+                          children: [
+                            TextField(
+                              controller: _busquedaController,
+                              onChanged: (valor) {
+                                setState(() => _textoBusqueda = valor);
+                              },
+                              decoration: InputDecoration(
+                                labelText: 'Buscar por código, nombre o categoría',
+                                prefixIcon: const Icon(Icons.search),
+                                border: const OutlineInputBorder(),
+                                suffixIcon: _textoBusqueda.isEmpty
+                                    ? null
+                                    : IconButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _textoBusqueda = '';
+                                            _busquedaController.clear();
+                                          });
+                                        },
+                                        icon: const Icon(Icons.close),
+                                      ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    key: ValueKey('cat-$_filtroCategoriaId'),
+                                    initialValue: _filtroCategoriaId.isEmpty
+                                        ? null
+                                        : _filtroCategoriaId,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Filtrar categoría',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    isExpanded: true,
+                                    items: categoriasDocs.map((doc) {
+                                      final nombre =
+                                          (doc.data()['nombre'] ?? '').toString();
+                                      return DropdownMenuItem(
+                                        value: doc.id,
+                                        child: Text(
+                                          nombre.isEmpty ? 'Sin nombre' : nombre,
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) {
+                                      setState(() => _filtroCategoriaId = value ?? '');
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    key: ValueKey('neg-$_filtroNegocioId'),
+                                    initialValue: _filtroNegocioId.isEmpty
+                                        ? null
+                                        : _filtroNegocioId,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Filtrar negocio',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    isExpanded: true,
+                                    items: negociosDocs.map((doc) {
+                                      final nombre =
+                                          (doc.data()['nombre'] ?? '').toString();
+                                      return DropdownMenuItem(
+                                        value: doc.id,
+                                        child: Text(
+                                          nombre.isEmpty ? 'Sin nombre' : nombre,
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) {
+                                      setState(() => _filtroNegocioId = value ?? '');
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: OutlinedButton.icon(
+                                onPressed: _limpiarFiltros,
+                                icon: const Icon(Icons.filter_alt_off),
+                                label: const Text('Eliminar todos los filtros'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: productosFiltrados.isEmpty
+                            ? const Center(
+                                child: Text('No hay productos para mostrar'),
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                                itemCount: productosFiltrados.length,
+                                itemBuilder: (context, index) {
+                                  final producto = productosFiltrados[index];
+                                  final nombreCategoria =
+                                      categoriasPorId[producto.idCategoria] ??
+                                      'Sin categoría';
+
+                                  return Card(
+                                    margin: const EdgeInsets.only(bottom: 10),
+                                    child: InkWell(
+                                      onDoubleTap: () => _mostrarDetalleProducto(
+                                        producto,
+                                        categoriasPorId,
+                                        negociosPorId,
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Row(
+                                          children: [
+                                            _buildFotoProducto(producto.fotoProducto),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    producto.nombreProducto,
+                                                    style: const TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 16,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text('Stock: ${producto.stockActual}'),
+                                                  Text('Categoría: $nombreCategoria'),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _abrirFormularioRegistro,
+        backgroundColor: _colorPrincipal,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
       ),
     );
   }
