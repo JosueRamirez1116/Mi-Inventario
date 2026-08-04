@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:mi_inventario/model/negocio_model.dart';
 
 class NegociosController extends GetxController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   final RxList<NegocioModel> negocios = <NegocioModel>[].obs;
 
@@ -32,7 +34,18 @@ class NegociosController extends GetxController {
 
     _suscripcion?.cancel();
 
-    _suscripcion = _coleccionNegocios.snapshots().listen(
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      cargando.value = false;
+      mensajeError.value = 'No hay un usuario autenticado';
+      negocios.clear();
+      return;
+    }
+
+    _suscripcion = _coleccionNegocios
+        .where('usuarioId', isEqualTo: uid)
+        .snapshots()
+        .listen(
       (snapshot) {
         final lista = snapshot.docs.map((documento) {
           return NegocioModel.fromMap(documento.id, documento.data());
@@ -79,8 +92,17 @@ class NegociosController extends GetxController {
   }
 
   Future<void> agregarNegocio(NegocioModel negocio) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      throw FirebaseAuthException(
+        code: 'missing-uid',
+        message: 'No hay un usuario autenticado.',
+      );
+    }
+
     final datos = <String, dynamic>{
       ...negocio.toMap(),
+      'usuarioId': uid,
       'estado': 1,
       'fechaCreacion': FieldValue.serverTimestamp(),
       'fechaActualizacion': FieldValue.serverTimestamp(),
@@ -93,8 +115,13 @@ class NegociosController extends GetxController {
     String id,
     NegocioModel negocioActualizado,
   ) async {
+    final uid = negocioActualizado.usuarioId.isNotEmpty
+        ? negocioActualizado.usuarioId
+        : _auth.currentUser?.uid ?? '';
+
     final datos = <String, dynamic>{
       ...negocioActualizado.toMap(),
+      'usuarioId': uid,
       'fechaActualizacion': FieldValue.serverTimestamp(),
     };
 

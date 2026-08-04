@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mi_inventario/model/productos_model.dart';
@@ -9,7 +10,7 @@ import 'package:mi_inventario/model/productos_model.dart';
 /// en Firestore. El escaneo de código de barra y la generación
 /// automática del código de producto se agregarán más adelante.
 class ProductosController extends GetxController {
-  final CollectionReference<Map<String, dynamic>> _referenciaProductos =
+  CollectionReference<Map<String, dynamic>> get _referenciaProductos =>
       FirebaseFirestore.instance.collection('productos');
   final CollectionReference<Map<String, dynamic>> _referenciaMovimientos =
       FirebaseFirestore.instance.collection('movimientos');
@@ -18,8 +19,6 @@ class ProductosController extends GetxController {
 
   final controladorNombre = TextEditingController();
   final controladorDescripcion = TextEditingController();
-  final controladorIdCategoria = TextEditingController();
-  final controladorIdNegocio = TextEditingController();
   final controladorCodigoBarra = TextEditingController();
   final controladorCodigoProducto = TextEditingController();
   final controladorStockMaximo = TextEditingController();
@@ -29,11 +28,124 @@ class ProductosController extends GetxController {
   final controladorPrecioCompra = TextEditingController();
   final controladorPrecioVenta = TextEditingController();
 
+  final RxString idNegocioSeleccionado = ''.obs;
+  final RxString idCategoriaSeleccionada = ''.obs;
+  final RxList<Map<String, String>> negociosUsuario = <Map<String, String>>[].obs;
+  final RxList<Map<String, String>> categoriasNegocio = <Map<String, String>>[].obs;
+  final RxBool cargandoNegocios = false.obs;
+  final RxBool cargandoCategorias = false.obs;
   final RxBool estaGuardando = false.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    cargarNegociosUsuario();
+  }
+
+  Future<void> cargarNegociosUsuario() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null || uid.isEmpty) return;
+
+    cargandoNegocios.value = true;
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('negocios')
+          .where('usuarioId', isEqualTo: uid)
+          .where('estado', isEqualTo: 1)
+          .get();
+
+      negociosUsuario.assignAll(
+        snapshot.docs.map((doc) {
+          final datos = doc.data();
+          final nombre = datos['nombre']?.toString() ??
+              datos['nombreNegocio']?.toString() ??
+              'Sin nombre';
+          return {'id': doc.id, 'nombre': nombre};
+        }).toList(),
+      );
+
+      if (negociosUsuario.isNotEmpty) {
+        if (idNegocioSeleccionado.value.isEmpty) {
+          idNegocioSeleccionado.value = negociosUsuario.first['id'] ?? '';
+        }
+        await cargarCategoriasDelNegocio(idNegocioSeleccionado.value);
+      } else {
+        idNegocioSeleccionado.value = '';
+        idCategoriaSeleccionada.value = '';
+        categoriasNegocio.clear();
+      }
+    } finally {
+      cargandoNegocios.value = false;
+    }
+  }
+
+  Future<void> cargarCategoriasDelNegocio(String negocioId) async {
+    if (negocioId.isEmpty) {
+      categoriasNegocio.clear();
+      idCategoriaSeleccionada.value = '';
+      return;
+    }
+
+    cargandoCategorias.value = true;
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null || uid.isEmpty) return;
+
+      final snapshot = await FirebaseFirestore.instance
+          .collection('categorias')
+          .where('usuarioId', isEqualTo: uid)
+          .where('negocioId', isEqualTo: negocioId)
+          .where('estado', isEqualTo: 1)
+          .get();
+
+      categoriasNegocio.assignAll(
+        snapshot.docs.map((doc) {
+          final datos = doc.data();
+          return {
+            'id': doc.id,
+            'nombre': datos['nombre']?.toString() ?? 'Sin nombre',
+          };
+        }).toList(),
+      );
+
+      if (categoriasNegocio.isNotEmpty) {
+        if (!categoriasNegocio.any((categoria) => categoria['id'] == idCategoriaSeleccionada.value)) {
+          idCategoriaSeleccionada.value = categoriasNegocio.first['id'] ?? '';
+        }
+      } else {
+        idCategoriaSeleccionada.value = '';
+      }
+    } finally {
+      cargandoCategorias.value = false;
+    }
+  }
+
+  void limpiarFormulario() {
+    controladorNombre.clear();
+    controladorDescripcion.clear();
+    controladorCodigoBarra.clear();
+    controladorCodigoProducto.clear();
+    controladorStockMaximo.clear();
+    controladorStockMinimo.clear();
+    controladorUnidadMedida.clear();
+    controladorStockActual.clear();
+    controladorPrecioCompra.clear();
+    controladorPrecioVenta.clear();
+
+    formularioKey.currentState?.reset();
+  }
 
   /// Valida el formulario y guarda el nuevo producto en Firestore.
   Future<void> guardarProducto({String? productoId}) async {
     if (!formularioKey.currentState!.validate()) return;
+    if (idNegocioSeleccionado.value.isEmpty) {
+      Get.snackbar('Datos inválidos', 'Selecciona un negocio antes de guardar');
+      return;
+    }
+    if (idCategoriaSeleccionada.value.isEmpty) {
+      Get.snackbar('Datos inválidos', 'Selecciona una categoría antes de guardar');
+      return;
+    }
 
     final stockMaximo = double.parse(controladorStockMaximo.text.trim());
     final stockMinimo = double.parse(controladorStockMinimo.text.trim());
@@ -51,8 +163,9 @@ class ProductosController extends GetxController {
       final nuevoProducto = ProductosModel(
         nombreProducto: controladorNombre.text.trim(),
         descripcion: controladorDescripcion.text.trim(),
-        idCategoria: controladorIdCategoria.text.trim(),
-        idNegocio: controladorIdNegocio.text.trim(),
+        idCategoria: idCategoriaSeleccionada.value,
+        idNegocio: idNegocioSeleccionado.value,
+        usuarioId: FirebaseAuth.instance.currentUser?.uid ?? '',
         codigoBarra: controladorCodigoBarra.text.trim().isEmpty
             ? null
             : controladorCodigoBarra.text.trim(),
@@ -77,7 +190,7 @@ class ProductosController extends GetxController {
         });
       }
 
-      Get.back(result: true);
+      limpiarFormulario();
       Get.snackbar(
         productoId == null ? 'Producto agregado' : 'Producto actualizado',
         productoId == null
@@ -208,8 +321,6 @@ class ProductosController extends GetxController {
   void onClose() {
     controladorNombre.dispose();
     controladorDescripcion.dispose();
-    controladorIdCategoria.dispose();
-    controladorIdNegocio.dispose();
     controladorCodigoBarra.dispose();
     controladorCodigoProducto.dispose();
     controladorStockMaximo.dispose();

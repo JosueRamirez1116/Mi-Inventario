@@ -5,6 +5,24 @@ import 'package:mi_inventario/controller/productos_controller.dart';
 import 'package:mi_inventario/model/productos_model.dart';
 import 'package:mi_inventario/view/productos/agregar_productos_screen.dart';
 
+/// Filtra una lista de productos (representados como mapas) por coincidencia
+/// parcial en el nombre. Se mantiene aquí para compatibilidad con pruebas
+/// existentes que validan esta lógica de forma aislada.
+List<Map<String, dynamic>> filtrarProductosPorNombre(
+  List<Map<String, dynamic>> productos,
+  String texto,
+) {
+  if (texto.trim().isEmpty) {
+    return productos;
+  }
+
+  final busqueda = texto.toLowerCase().trim();
+  return productos.where((producto) {
+    final nombre = (producto['nombreProducto'] ?? '').toString().toLowerCase();
+    return nombre.contains(busqueda);
+  }).toList();
+}
+
 class InventarioScreen extends StatefulWidget {
   const InventarioScreen({super.key});
 
