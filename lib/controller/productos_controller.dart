@@ -295,6 +295,7 @@ class ProductosController extends GetxController {
         'codigoProducto': datosProducto['codigoProducto'] ?? '',
         'idCategoria': datosProducto['idCategoria'] ?? '',
         'idNegocio': datosProducto['idNegocio'] ?? '',
+        'usuarioId': datosProducto['usuarioId'] ?? FirebaseAuth.instance.currentUser?.uid ?? '',
         'tipoMovimiento': tipoMovimiento,
         'cantidad': cantidad,
         'stockAnterior': stockActual,

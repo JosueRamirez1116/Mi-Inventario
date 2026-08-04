@@ -17,6 +17,7 @@ class _ReportesScreenState extends State<ReportesScreen> {
 
   DateTime? _fechaInicio;
   DateTime? _fechaFin;
+  String _negocioSeleccionado = '';
   String _categoriaSeleccionada = '';
   String _productoSeleccionado = '';
   bool _exportandoPdf = false;
@@ -158,6 +159,7 @@ class _ReportesScreenState extends State<ReportesScreen> {
     setState(() {
       _fechaInicio = null;
       _fechaFin = null;
+      _negocioSeleccionado = '';
       _categoriaSeleccionada = '';
       _productoSeleccionado = '';
     });
@@ -184,18 +186,60 @@ class _ReportesScreenState extends State<ReportesScreen> {
           }
 
           final movimientos = snapshot.data!;
+          final negocios = <String, String>{};
           final categorias = <String, String>{};
           final productos = <String, String>{};
 
           for (final item in movimientos) {
-            categorias[item.idCategoria] = item.categoria;
-            productos[item.idProducto] = item.producto;
+            negocios[item.idNegocio] = item.negocio;
+          }
+
+          for (final item in movimientos) {
+            final coincideNegocio = _negocioSeleccionado.isEmpty ||
+                item.idNegocio == _negocioSeleccionado;
+            if (coincideNegocio) {
+              categorias[item.idCategoria] = item.categoria;
+            }
+          }
+
+          for (final item in movimientos) {
+            final coincideNegocio = _negocioSeleccionado.isEmpty ||
+                item.idNegocio == _negocioSeleccionado;
+            final coincideCategoria = _categoriaSeleccionada.isEmpty ||
+                item.idCategoria == _categoriaSeleccionada;
+            if (coincideNegocio && coincideCategoria) {
+              productos[item.idProducto] = item.producto;
+            }
+          }
+
+          if (_categoriaSeleccionada.isNotEmpty &&
+              !categorias.containsKey(_categoriaSeleccionada)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) {
+                return;
+              }
+              setState(() {
+                _categoriaSeleccionada = '';
+                _productoSeleccionado = '';
+              });
+            });
+          }
+
+          if (_productoSeleccionado.isNotEmpty &&
+              !productos.containsKey(_productoSeleccionado)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) {
+                return;
+              }
+              setState(() => _productoSeleccionado = '');
+            });
           }
 
           final movimientosFiltrados = _controller.filtrarMovimientos(
             movimientos: movimientos,
             fechaInicio: _fechaInicio,
             fechaFin: _fechaFin,
+            negocioId: _negocioSeleccionado,
             categoriaId: _categoriaSeleccionada,
             productoId: _productoSeleccionado,
           );
@@ -234,6 +278,29 @@ class _ReportesScreenState extends State<ReportesScreen> {
                       ],
                     ),
                     const SizedBox(height: 10),
+                    DropdownButtonFormField<String>(
+                      key: ValueKey('negocio-$_negocioSeleccionado'),
+                      initialValue:
+                          _negocioSeleccionado.isEmpty ? null : _negocioSeleccionado,
+                      decoration: const InputDecoration(
+                        labelText: 'Negocio',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: negocios.entries.map((entry) {
+                        return DropdownMenuItem<String>(
+                          value: entry.key,
+                          child: Text(entry.value.isEmpty ? 'Sin negocio' : entry.value),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _negocioSeleccionado = value ?? '';
+                          _categoriaSeleccionada = '';
+                          _productoSeleccionado = '';
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 10),
                     Row(
                       children: [
                         Expanded(
@@ -253,7 +320,10 @@ class _ReportesScreenState extends State<ReportesScreen> {
                               );
                             }).toList(),
                             onChanged: (value) {
-                              setState(() => _categoriaSeleccionada = value ?? '');
+                              setState(() {
+                                _categoriaSeleccionada = value ?? '';
+                                _productoSeleccionado = '';
+                              });
                             },
                           ),
                         ),

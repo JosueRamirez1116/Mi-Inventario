@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:mi_inventario/model/movimiento_model.dart';
 
@@ -13,8 +14,16 @@ class MovimientosController extends GetxController {
     return _firestore.collection('productos');
   }
 
+  String? get _uidActual => FirebaseAuth.instance.currentUser?.uid;
+
   Stream<List<MovimientoModel>> obtenerMovimientosActivos() {
+    final uid = _uidActual;
+    if (uid == null || uid.isEmpty) {
+      return const Stream.empty();
+    }
+
     return _movimientosRef
+        .where('usuarioId', isEqualTo: uid)
         .where('estado', isEqualTo: 1)
         .snapshots()
         .map((snapshot) {
@@ -35,6 +44,11 @@ class MovimientosController extends GetxController {
     required String nuevoTipoMovimiento,
     required double nuevaCantidad,
   }) async {
+    final uid = _uidActual;
+    if (uid == null || uid.isEmpty) {
+      throw Exception('No hay un usuario autenticado');
+    }
+
     if (nuevaCantidad <= 0) {
       throw Exception('La cantidad debe ser mayor a cero');
     }
@@ -46,6 +60,11 @@ class MovimientosController extends GetxController {
       final movimientoSnapshot = await transaction.get(movimientoDoc);
       if (!movimientoSnapshot.exists) {
         throw Exception('El movimiento ya no existe');
+      }
+      final datosMovimiento = movimientoSnapshot.data() ?? <String, dynamic>{};
+      final usuarioMovimiento = (datosMovimiento['usuarioId'] ?? '').toString();
+      if (usuarioMovimiento.isNotEmpty && usuarioMovimiento != uid) {
+        throw Exception('No tienes permisos para editar este movimiento');
       }
 
       final productoSnapshot = await transaction.get(productoDoc);
@@ -88,6 +107,11 @@ class MovimientosController extends GetxController {
   }
 
   Future<void> eliminarMovimiento(MovimientoModel movimiento) async {
+    final uid = _uidActual;
+    if (uid == null || uid.isEmpty) {
+      throw Exception('No hay un usuario autenticado');
+    }
+
     final movimientoDoc = _movimientosRef.doc(movimiento.id);
     final productoDoc = _productosRef.doc(movimiento.idProducto);
 
@@ -95,6 +119,11 @@ class MovimientosController extends GetxController {
       final movimientoSnapshot = await transaction.get(movimientoDoc);
       if (!movimientoSnapshot.exists) {
         throw Exception('El movimiento ya no existe');
+      }
+      final datosMovimiento = movimientoSnapshot.data() ?? <String, dynamic>{};
+      final usuarioMovimiento = (datosMovimiento['usuarioId'] ?? '').toString();
+      if (usuarioMovimiento.isNotEmpty && usuarioMovimiento != uid) {
+        throw Exception('No tienes permisos para eliminar este movimiento');
       }
 
       final productoSnapshot = await transaction.get(productoDoc);
