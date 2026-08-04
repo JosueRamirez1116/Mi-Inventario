@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:mi_inventario/controller/movimientos_controller.dart';
 import 'package:mi_inventario/model/movimiento_model.dart';
@@ -17,6 +19,36 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
   DateTime? _fechaInicio;
   DateTime? _fechaFin;
   String _tipoMovimiento = 'Todos';
+  String _filtroNegocioId = '';
+  String _filtroCategoriaId = '';
+
+  String? get _uidActual => FirebaseAuth.instance.currentUser?.uid;
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> get _streamCategorias {
+    final uid = _uidActual;
+    if (uid == null || uid.isEmpty) {
+      return const Stream.empty();
+    }
+
+    return FirebaseFirestore.instance
+        .collection('categorias')
+        .where('usuarioId', isEqualTo: uid)
+        .where('estado', isEqualTo: 1)
+        .snapshots();
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> get _streamNegocios {
+    final uid = _uidActual;
+    if (uid == null || uid.isEmpty) {
+      return const Stream.empty();
+    }
+
+    return FirebaseFirestore.instance
+        .collection('negocios')
+        .where('usuarioId', isEqualTo: uid)
+        .where('estado', isEqualTo: 1)
+        .snapshots();
+  }
 
   @override
   void initState() {
@@ -75,6 +107,14 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
   List<MovimientoModel> _filtrarMovimientos(List<MovimientoModel> movimientos) {
     return movimientos.where((movimiento) {
       if (_tipoMovimiento != 'Todos' && movimiento.tipoMovimiento != _tipoMovimiento) {
+        return false;
+      }
+
+      if (_filtroNegocioId.isNotEmpty && movimiento.idNegocio != _filtroNegocioId) {
+        return false;
+      }
+
+      if (_filtroCategoriaId.isNotEmpty && movimiento.idCategoria != _filtroCategoriaId) {
         return false;
       }
 
@@ -259,6 +299,8 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
       _fechaInicio = null;
       _fechaFin = null;
       _tipoMovimiento = 'Todos';
+      _filtroNegocioId = '';
+      _filtroCategoriaId = '';
     });
   }
 
@@ -271,149 +313,273 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
         backgroundColor: _colorPrincipal,
         foregroundColor: Colors.white,
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _seleccionarFechaInicio,
-                        icon: const Icon(Icons.calendar_today),
-                        label: Text(
-                          _fechaInicio == null
-                              ? 'Fecha inicio'
-                              : _formatearFecha(_fechaInicio!),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _seleccionarFechaFin,
-                        icon: const Icon(Icons.calendar_month),
-                        label: Text(
-                          _fechaFin == null ? 'Fecha fin' : _formatearFecha(_fechaFin!),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  key: ValueKey('filtro-$_tipoMovimiento'),
-                  initialValue: _tipoMovimiento,
-                  decoration: const InputDecoration(
-                    labelText: 'Tipo de movimiento',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'Todos', child: Text('Todos')),
-                    DropdownMenuItem(value: 'Entrada', child: Text('Entrada')),
-                    DropdownMenuItem(value: 'Salida', child: Text('Salida')),
-                  ],
-                  onChanged: (value) {
-                    if (value == null) {
-                      return;
-                    }
-                    setState(() => _tipoMovimiento = value);
-                  },
-                ),
-                const SizedBox(height: 10),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: OutlinedButton.icon(
-                    onPressed: _limpiarFiltros,
-                    icon: const Icon(Icons.filter_alt_off),
-                    label: const Text('Limpiar filtros'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: StreamBuilder<List<MovimientoModel>>(
-              stream: _controller.obtenerMovimientosActivos(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return const Center(
-                    child: Text('No se pudieron cargar los movimientos'),
-                  );
-                }
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: _streamCategorias,
+        builder: (context, categoriasSnapshot) {
+          if (categoriasSnapshot.hasError) {
+            return const Center(child: Text('No se pudieron cargar las categorías'));
+          }
 
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+          final categoriasDocs = categoriasSnapshot.data?.docs ?? [];
 
-                final movimientosFiltrados = _filtrarMovimientos(snapshot.data!);
-                if (movimientosFiltrados.isEmpty) {
-                  return const Center(
-                    child: Text('No hay movimientos para mostrar'),
-                  );
-                }
+          return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: _streamNegocios,
+            builder: (context, negociosSnapshot) {
+              if (negociosSnapshot.hasError) {
+                return const Center(child: Text('No se pudieron cargar los negocios'));
+              }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                  itemCount: movimientosFiltrados.length,
-                  itemBuilder: (context, index) {
-                    final movimiento = movimientosFiltrados[index];
-                    final esEntrada = movimiento.tipoMovimiento == 'Entrada';
-                    final colorTipo = esEntrada ? Colors.green : Colors.orange;
+              final negociosDocs = negociosSnapshot.data?.docs ?? [];
+              final categoriasVisibles = _filtroNegocioId.isEmpty
+                  ? categoriasDocs
+                  : categoriasDocs.where((doc) {
+                      final negocioIdCategoria =
+                          (doc.data()['negocioId'] ?? '').toString();
+                      return negocioIdCategoria == _filtroNegocioId;
+                    }).toList();
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Row(
+              if (_filtroCategoriaId.isNotEmpty &&
+                  !categoriasVisibles.any((doc) => doc.id == _filtroCategoriaId)) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) {
+                    return;
+                  }
+                  setState(() => _filtroCategoriaId = '');
+                });
+              }
+
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Row(
                           children: [
-                            GestureDetector(
-                              onDoubleTap: () => _mostrarDialogoEdicion(movimiento),
-                              child: const CircleAvatar(
-                                backgroundColor: Color(0xFFE2E8F0),
-                                child: Icon(Icons.image, color: Colors.black54),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    movimiento.nombreProducto,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text('Código: ${movimiento.codigoProducto}'),
-                                  Text('Fecha: ${_formatearFecha(movimiento.fechaMovimiento)}'),
-                                  Text(
-                                    'Tipo: ${movimiento.tipoMovimiento}',
-                                    style: TextStyle(color: colorTipo),
-                                  ),
-                                  Text('Cantidad: ${movimiento.cantidad}'),
-                                ],
+                              child: OutlinedButton.icon(
+                                onPressed: _seleccionarFechaInicio,
+                                icon: const Icon(Icons.calendar_today),
+                                label: Text(
+                                  _fechaInicio == null
+                                      ? 'Fecha inicio'
+                                      : _formatearFecha(_fechaInicio!),
+                                ),
                               ),
                             ),
-                            IconButton(
-                              onPressed: () => _confirmarEliminacion(movimiento),
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              tooltip: 'Eliminar movimiento',
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _seleccionarFechaFin,
+                                icon: const Icon(Icons.calendar_month),
+                                label: Text(
+                                  _fechaFin == null
+                                      ? 'Fecha fin'
+                                      : _formatearFecha(_fechaFin!),
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
+                        const SizedBox(height: 10),
+                        DropdownButtonFormField<String>(
+                          key: ValueKey('filtro-$_tipoMovimiento'),
+                          initialValue: _tipoMovimiento,
+                          decoration: const InputDecoration(
+                            labelText: 'Tipo de movimiento',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'Todos', child: Text('Todos')),
+                            DropdownMenuItem(
+                              value: 'Entrada',
+                              child: Text('Entrada'),
+                            ),
+                            DropdownMenuItem(value: 'Salida', child: Text('Salida')),
+                          ],
+                          onChanged: (value) {
+                            if (value == null) {
+                              return;
+                            }
+                            setState(() => _tipoMovimiento = value);
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                key: ValueKey('negocio-$_filtroNegocioId'),
+                                initialValue: _filtroNegocioId.isEmpty
+                                    ? null
+                                    : _filtroNegocioId,
+                                decoration: const InputDecoration(
+                                  labelText: 'Negocio',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: negociosDocs.map((doc) {
+                                  final nombre =
+                                      (doc.data()['nombre'] ?? '').toString();
+                                  return DropdownMenuItem<String>(
+                                    value: doc.id,
+                                    child: Text(
+                                      nombre.isEmpty ? 'Sin nombre' : nombre,
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _filtroNegocioId = value ?? '';
+                                    _filtroCategoriaId = '';
+                                  });
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                key: ValueKey('categoria-$_filtroCategoriaId'),
+                                initialValue: _filtroCategoriaId.isEmpty
+                                    ? null
+                                    : _filtroCategoriaId,
+                                decoration: const InputDecoration(
+                                  labelText: 'Categoría',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: categoriasVisibles.map((doc) {
+                                  final nombre =
+                                      (doc.data()['nombre'] ?? '').toString();
+                                  return DropdownMenuItem<String>(
+                                    value: doc.id,
+                                    child: Text(
+                                      nombre.isEmpty ? 'Sin categoría' : nombre,
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() => _filtroCategoriaId = value ?? '');
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: OutlinedButton.icon(
+                            onPressed: _limpiarFiltros,
+                            icon: const Icon(Icons.filter_alt_off),
+                            label: const Text('Limpiar filtros'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: StreamBuilder<List<MovimientoModel>>(
+                      stream: _controller.obtenerMovimientosActivos(),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return const Center(
+                            child: Text('No se pudieron cargar los movimientos'),
+                          );
+                        }
+
+                        if (!snapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+
+                        final movimientosFiltrados = _filtrarMovimientos(
+                          snapshot.data!,
+                        );
+                        if (movimientosFiltrados.isEmpty) {
+                          return const Center(
+                            child: Text('No hay movimientos para mostrar'),
+                          );
+                        }
+
+                        return ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                          itemCount: movimientosFiltrados.length,
+                          itemBuilder: (context, index) {
+                            final movimiento = movimientosFiltrados[index];
+                            final esEntrada = movimiento.tipoMovimiento == 'Entrada';
+                            final colorTipo = esEntrada
+                                ? Colors.green
+                                : Colors.orange;
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Row(
+                                  children: [
+                                    GestureDetector(
+                                      onDoubleTap: () =>
+                                          _mostrarDialogoEdicion(movimiento),
+                                      child: const CircleAvatar(
+                                        backgroundColor: Color(0xFFE2E8F0),
+                                        child: Icon(
+                                          Icons.image,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            movimiento.nombreProducto,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Código: ${movimiento.codigoProducto}',
+                                          ),
+                                          Text(
+                                            'Fecha: ${_formatearFecha(movimiento.fechaMovimiento)}',
+                                          ),
+                                          Text(
+                                            'Tipo: ${movimiento.tipoMovimiento}',
+                                            style: TextStyle(color: colorTipo),
+                                          ),
+                                          Text(
+                                            'Cantidad: ${movimiento.cantidad}',
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      onPressed: () =>
+                                          _confirmarEliminacion(movimiento),
+                                      icon: const Icon(
+                                        Icons.delete,
+                                        color: Colors.red,
+                                      ),
+                                      tooltip: 'Eliminar movimiento',
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
       ),
     );
   }

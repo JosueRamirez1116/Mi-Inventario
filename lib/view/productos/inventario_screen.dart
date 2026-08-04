@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mi_inventario/controller/productos_controller.dart';
@@ -40,6 +41,8 @@ class _InventarioScreenState extends State<InventarioScreen> {
   String _filtroCategoriaId = '';
   String _filtroNegocioId = '';
 
+  String? get _uidActual => FirebaseAuth.instance.currentUser?.uid;
+
   @override
   void initState() {
     super.initState();
@@ -57,22 +60,40 @@ class _InventarioScreenState extends State<InventarioScreen> {
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> get _streamProductos {
+    final uid = _uidActual;
+    if (uid == null || uid.isEmpty) {
+      return const Stream.empty();
+    }
+
     return FirebaseFirestore.instance
         .collection('productos')
+        .where('usuarioId', isEqualTo: uid)
         .where('estado', isEqualTo: 1)
         .snapshots();
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> get _streamCategorias {
+    final uid = _uidActual;
+    if (uid == null || uid.isEmpty) {
+      return const Stream.empty();
+    }
+
     return FirebaseFirestore.instance
         .collection('categorias')
+        .where('usuarioId', isEqualTo: uid)
         .where('estado', isEqualTo: 1)
         .snapshots();
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> get _streamNegocios {
+    final uid = _uidActual;
+    if (uid == null || uid.isEmpty) {
+      return const Stream.empty();
+    }
+
     return FirebaseFirestore.instance
         .collection('negocios')
+        .where('usuarioId', isEqualTo: uid)
         .where('estado', isEqualTo: 1)
         .snapshots();
   }
@@ -446,6 +467,23 @@ class _InventarioScreenState extends State<InventarioScreen> {
                 for (final negocio in negociosDocs)
                   negocio.id: (negocio.data()['nombre'] ?? '').toString(),
               };
+              final categoriasVisibles = _filtroNegocioId.isEmpty
+                  ? categoriasDocs
+                  : categoriasDocs.where((doc) {
+                      final negocioIdCategoria =
+                          (doc.data()['negocioId'] ?? '').toString();
+                      return negocioIdCategoria == _filtroNegocioId;
+                    }).toList();
+
+              if (_filtroCategoriaId.isNotEmpty &&
+                  !categoriasVisibles.any((doc) => doc.id == _filtroCategoriaId)) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) {
+                    return;
+                  }
+                  setState(() => _filtroCategoriaId = '');
+                });
+              }
 
               return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: _streamProductos,
@@ -516,7 +554,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                       border: OutlineInputBorder(),
                                     ),
                                     isExpanded: true,
-                                    items: categoriasDocs.map((doc) {
+                                    items: categoriasVisibles.map((doc) {
                                       final nombre =
                                           (doc.data()['nombre'] ?? '').toString();
                                       return DropdownMenuItem(
@@ -554,7 +592,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                       );
                                     }).toList(),
                                     onChanged: (value) {
-                                      setState(() => _filtroNegocioId = value ?? '');
+                                      setState(() {
+                                        _filtroNegocioId = value ?? '';
+                                        _filtroCategoriaId = '';
+                                      });
                                     },
                                   ),
                                 ),

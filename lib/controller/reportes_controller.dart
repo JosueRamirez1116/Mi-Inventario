@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:excel/excel.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:mi_inventario/model/reporte_movimiento_model.dart';
 import 'package:path_provider/path_provider.dart';
@@ -23,13 +24,27 @@ class ReportesController extends GetxController {
     return _firestore.collection('negocios');
   }
 
+  String? get _uidActual => FirebaseAuth.instance.currentUser?.uid;
+
   Stream<List<ReporteMovimientoModel>> obtenerMovimientosParaReporte() {
+    final uid = _uidActual;
+    if (uid == null || uid.isEmpty) {
+      return const Stream.empty();
+    }
+
     return _movimientosRef
+        .where('usuarioId', isEqualTo: uid)
         .where('estado', isEqualTo: 1)
         .snapshots()
         .asyncMap((movimientosSnapshot) async {
-          final categoriasSnapshot = await _categoriasRef.get();
-          final negociosSnapshot = await _negociosRef.get();
+          final categoriasSnapshot = await _categoriasRef
+              .where('usuarioId', isEqualTo: uid)
+              .where('estado', isEqualTo: 1)
+              .get();
+          final negociosSnapshot = await _negociosRef
+              .where('usuarioId', isEqualTo: uid)
+              .where('estado', isEqualTo: 1)
+              .get();
 
           final categoriasPorId = <String, String>{
             for (final categoria in categoriasSnapshot.docs)
@@ -78,10 +93,15 @@ class ReportesController extends GetxController {
     required List<ReporteMovimientoModel> movimientos,
     DateTime? fechaInicio,
     DateTime? fechaFin,
+    String negocioId = '',
     String categoriaId = '',
     String productoId = '',
   }) {
     return movimientos.where((movimiento) {
+      if (negocioId.isNotEmpty && movimiento.idNegocio != negocioId) {
+        return false;
+      }
+
       if (categoriaId.isNotEmpty && movimiento.idCategoria != categoriaId) {
         return false;
       }
