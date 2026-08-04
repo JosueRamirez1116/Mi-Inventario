@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:mi_inventario/Categorias/categoria_screen.dart';
 import 'package:mi_inventario/auth/services/auth_service.dart';
 import 'package:mi_inventario/controller/dashboard_controller.dart';
 import 'package:mi_inventario/controller/productos_controller.dart';
 import 'package:mi_inventario/model/dashboard_model.dart';
+import 'package:mi_inventario/view/movimientos/movimientos_screen.dart';
 import 'package:mi_inventario/view/negocios/negocios_screen.dart';
 import 'package:mi_inventario/view/productos/agregar_productos_screen.dart';
-import 'package:mi_inventario/view/inventario/inventario_screen.dart';
-import 'package:get/get.dart';
+import 'package:mi_inventario/view/productos/inventario_screen.dart';
+import 'package:mi_inventario/view/reportes/reportes_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key, required this.authService});
@@ -43,7 +45,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
         break;
       case 'Inventario':
-        Get.to(() => const InventarioScreen());
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const InventarioScreen()),
+        );
         break;
       case 'Categorias':
       case 'Categorías':
@@ -59,6 +64,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const NegociosScreen()),
+        );
+        break;
+      case 'Movimientos':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MovimientosScreen()),
+        );
+        break;
+      case 'Reportes':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ReportesScreen()),
         );
         break;
       default:
