@@ -26,15 +26,60 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  static const Color colorPrincipal = Color.fromARGB(255, 28, 83, 170);
+
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
       title: 'Mi Inventario',
       debugShowCheckedModeBanner: false,
+
+      // TEMA CLARO
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
+        brightness: Brightness.light,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: colorPrincipal,
+          brightness: Brightness.light,
+        ),
+        scaffoldBackgroundColor: const Color.fromARGB(255, 248, 244, 250),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: colorPrincipal,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       ),
+
+      // TEMA OSCURO
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: colorPrincipal,
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: colorPrincipal,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFF242424),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+
+      // La aplicación inicia en modo claro.
+      // ConfiguracionScreen podrá cambiarlo usando Get.changeThemeMode().
+      themeMode: ThemeMode.light,
+
       home: const AuthGate(),
     );
   }
@@ -64,8 +109,8 @@ class _AuthGateState extends State<AuthGate> {
         if (snapshot.hasData) {
           return DashboardScreen(authService: _auth);
         }
+
         return LoginScreen();
-        //return const AgregarProductosScreen();
       },
     );
   }
@@ -79,6 +124,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final email = authService.usuarioActual?.email ?? 'Usuario';
+
     final uid = authService.usuarioActual?.uid ?? 'default';
 
     return Scaffold(
@@ -92,12 +138,12 @@ class HomeScreen extends StatelessWidget {
               );
             },
             icon: const Icon(Icons.settings),
-            tooltip: 'Configuracion',
+            tooltip: 'Configuración',
           ),
           IconButton(
             onPressed: authService.cerrarSesion,
             icon: const Icon(Icons.logout),
-            tooltip: 'Cerrar sesion',
+            tooltip: 'Cerrar sesión',
           ),
         ],
       ),
@@ -108,12 +154,16 @@ class HomeScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(Icons.inventory_2_outlined, size: 72),
+
               const SizedBox(height: 16),
+
               Text(
-                'Sesion iniciada: $email',
+                'Sesión iniciada: $email',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
+
               const SizedBox(height: 32),
+
               ElevatedButton.icon(
                 onPressed: () {
                   Navigator.of(context).push(
@@ -124,7 +174,7 @@ class HomeScreen extends StatelessWidget {
                   );
                 },
                 icon: const Icon(Icons.category),
-                label: const Text('Gestionar categorias'),
+                label: const Text('Gestionar categorías'),
               ),
             ],
           ),
