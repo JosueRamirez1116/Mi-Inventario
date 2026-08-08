@@ -309,8 +309,8 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 248, 244, 250),
       appBar: AppBar(
-        title: const Text('Histórico de movimientos'),
-        backgroundColor: _colorPrincipal,
+        title: const Text('Movimientos'),
+        backgroundColor: const Color.fromARGB(254, 74, 63, 207),
         foregroundColor: Colors.white,
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -557,15 +557,29 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                                         ],
                                       ),
                                     ),
-                                    IconButton(
+                                    Row(
+                                     mainAxisSize: MainAxisSize.min,
+                                     children: [
+                                     IconButton(
                                       onPressed: () =>
-                                          _confirmarEliminacion(movimiento),
-                                      icon: const Icon(
-                                        Icons.delete,
-                                        color: Colors.red,
+                                     _mostrarDialogoEdicion(movimiento),
+                                     icon: const Icon(
+                                     Icons.edit,
+                                      color: _colorPrincipal,
                                       ),
-                                      tooltip: 'Eliminar movimiento',
+                                       tooltip: 'Editar movimiento',
                                     ),
+                                     IconButton(
+                                     onPressed: () =>
+                                      _confirmarEliminacion(movimiento),
+                                      icon: const Icon(
+                                      Icons.delete,
+                                     color: Colors.red,
+                                    ),
+                                     tooltip: 'Eliminar movimiento',
+                                       ),
+                                           ],
+                                           ),
                                   ],
                                 ),
                               ),
