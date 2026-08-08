@@ -1,11 +1,8 @@
-
 import 'package:flutter/material.dart';
 import 'package:mi_inventario/model/dashboard_model.dart';
 
 class DashboardController {
-
   final List<DashboardModel> opciones = [
-
     DashboardModel(
       titulo: 'Productos',
       icono: Icons.shopping_bag,
@@ -34,6 +31,12 @@ class DashboardController {
     DashboardModel(
       titulo: 'Movimientos',
       icono: Icons.description,
+    ),
+
+    // Nueva opción del dashboard.
+    DashboardModel(
+      titulo: 'Configuración',
+      icono: Icons.settings,
     ),
   ];
 }

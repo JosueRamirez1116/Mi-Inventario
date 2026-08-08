@@ -4,105 +4,61 @@ import 'package:mi_inventario/controller/negocios_controller.dart';
 import 'package:mi_inventario/model/negocio_model.dart';
 import 'package:mi_inventario/view/negocios/negocio_form_screen.dart';
 
-class NegociosScreen extends StatefulWidget {
+class NegociosScreen extends StatelessWidget {
   const NegociosScreen({super.key});
 
-  @override
-  State<NegociosScreen> createState() {
-    return _NegociosScreenState();
-  }
-}
-
-class _NegociosScreenState extends State<NegociosScreen> {
   static const Color _colorPrincipal = Color.fromARGB(255, 28, 83, 170);
 
-  late final NegociosController controller;
-
-  final TextEditingController _busquedaController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-
+  NegociosController _obtenerController() {
     if (Get.isRegistered<NegociosController>()) {
-      controller = Get.find<NegociosController>();
-    } else {
-      controller = Get.put(NegociosController());
-    }
-  }
-
-  @override
-  void dispose() {
-    _busquedaController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _abrirFormularioRegistro() async {
-    final resultado = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => NegocioFormScreen(controller: controller),
-      ),
-    );
-
-    if (!mounted || resultado != true) {
-      return;
+      return Get.find<NegociosController>();
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Negocio registrado correctamente'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    return Get.put(NegociosController());
   }
 
-  Future<void> _abrirFormularioEdicion(NegocioModel negocio) async {
-    final resultado = await Navigator.push<bool>(
-      context,
+  Future<void> _abrirFormulario(
+    BuildContext context,
+    NegociosController controller, {
+    NegocioModel? negocio,
+  }) async {
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) =>
             NegocioFormScreen(controller: controller, negocio: negocio),
       ),
     );
-
-    if (!mounted || resultado != true) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Negocio actualizado correctamente'),
-        backgroundColor: Colors.green,
-      ),
-    );
   }
 
-  Future<void> _confirmarEliminacion(NegocioModel negocio) async {
+  Future<void> _confirmarEliminar(
+    BuildContext context,
+    NegociosController controller,
+    NegocioModel negocio,
+  ) async {
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Eliminar negocio'),
           content: Text(
-            '¿Desea eliminar el negocio '
-            '"${negocio.nombre}"?',
+            '¿Deseas eliminar "${negocio.nombre}"?\n\n'
+            'El negocio quedará marcado como eliminado.',
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(dialogContext, false);
+                Navigator.of(dialogContext).pop(false);
               },
               child: const Text('Cancelar'),
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, true);
-              },
-              style: ElevatedButton.styleFrom(
+            FilledButton(
+              style: FilledButton.styleFrom(
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
               ),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
               child: const Text('Eliminar'),
             ),
           ],
@@ -110,140 +66,203 @@ class _NegociosScreenState extends State<NegociosScreen> {
       },
     );
 
-    if (!mounted || confirmar != true) {
+    if (confirmar != true) {
       return;
     }
 
     try {
       await controller.eliminarNegocio(negocio.id);
 
-      if (!mounted) {
+      if (!context.mounted) {
         return;
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Negocio eliminado correctamente'),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text('Negocio eliminado correctamente.')),
       );
-    } catch (error) {
-      if (!mounted) {
+    } catch (_) {
+      if (!context.mounted) {
         return;
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('No se pudo eliminar el negocio: $error'),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text('No se pudo eliminar el negocio.')),
       );
     }
   }
 
-  void _limpiarBusqueda() {
-    _busquedaController.clear();
-    controller.buscarNegocio('');
-  }
-
   @override
   Widget build(BuildContext context) {
+    final controller = _obtenerController();
+
+    final esOscuro = Theme.of(context).brightness == Brightness.dark;
+
+    final colorFondo = esOscuro
+        ? const Color(0xFF121212)
+        : const Color.fromARGB(255, 248, 244, 250);
+
+    final colorTarjeta = esOscuro ? const Color(0xFF202020) : Colors.white;
+
+    final colorCampo = esOscuro ? const Color(0xFF242424) : Colors.white;
+
+    final colorTexto = esOscuro ? Colors.white : const Color(0xFF303030);
+
+    final colorSecundario = esOscuro ? Colors.white70 : Colors.black54;
+
+    final colorBorde = esOscuro ? Colors.white24 : Colors.grey.shade300;
+
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 248, 244, 250),
+      backgroundColor: colorFondo,
       appBar: AppBar(
-        title: const Text('Gestión de negocios'),
         backgroundColor: _colorPrincipal,
         foregroundColor: Colors.white,
+        title: const Text(
+          'Gestión de negocios',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
-            onPressed: _abrirFormularioRegistro,
-            icon: const Icon(Icons.add),
             tooltip: 'Agregar negocio',
+            onPressed: () {
+              _abrirFormulario(context, controller);
+            },
+            icon: const Icon(Icons.add),
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _busquedaController,
-              onChanged: controller.buscarNegocio,
-              decoration: InputDecoration(
-                labelText: 'Buscar negocio',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: IconButton(
-                  onPressed: _limpiarBusqueda,
-                  icon: const Icon(Icons.close),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: _colorPrincipal,
+        foregroundColor: Colors.white,
+        onPressed: () {
+          _abrirFormulario(context, controller);
+        },
+        child: const Icon(Icons.add),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+              child: TextField(
+                onChanged: controller.buscarNegocio,
+                style: TextStyle(color: colorTexto),
+                decoration: InputDecoration(
+                  hintText: 'Buscar negocio',
+                  hintStyle: TextStyle(color: colorSecundario),
+                  prefixIcon: Icon(Icons.search, color: colorSecundario),
+                  filled: true,
+                  fillColor: colorCampo,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: colorBorde),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: colorBorde),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: _colorPrincipal,
+                      width: 2,
+                    ),
+                  ),
                 ),
-                border: const OutlineInputBorder(),
               ),
             ),
-          ),
-          Expanded(
-            child: Obx(() {
-              if (controller.cargando.value && controller.negocios.isEmpty) {
-                return const Center(child: CircularProgressIndicator());
-              }
+            Expanded(
+              child: Obx(() {
+                if (controller.cargando.value) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-              if (controller.mensajeError.value.isNotEmpty) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
+                if (controller.mensajeError.value.isNotEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 60,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            controller.mensajeError.value,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: colorTexto),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                final negocios = controller.negociosFiltrados;
+
+                if (negocios.isEmpty) {
+                  return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 60,
-                          color: Colors.red,
+                        Icon(
+                          Icons.store_outlined,
+                          size: 70,
+                          color: esOscuro
+                              ? Colors.white38
+                              : Colors.grey.shade400,
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
                         Text(
-                          controller.mensajeError.value,
-                          textAlign: TextAlign.center,
+                          controller.textoBusqueda.value.isEmpty
+                              ? 'No hay negocios registrados'
+                              : 'No se encontraron negocios',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: colorSecundario,
+                          ),
                         ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: controller.escucharNegocios,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Reintentar'),
+                        const SizedBox(height: 6),
+                        Text(
+                          controller.textoBusqueda.value.isEmpty
+                              ? 'Presiona + para agregar uno'
+                              : 'Intenta con otra búsqueda',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: colorSecundario,
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                );
-              }
+                  );
+                }
 
-              final negocios = controller.negociosFiltrados;
+                return ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(14, 6, 14, 90),
+                  itemCount: negocios.length,
+                  itemBuilder: (context, index) {
+                    final negocio = negocios[index];
 
-              if (negocios.isEmpty) {
-                return const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.store, size: 70, color: Colors.grey),
-                      SizedBox(height: 12),
-                      Text(
-                        'No hay negocios para mostrar',
-                        style: TextStyle(fontSize: 18),
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: colorTarjeta,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: colorBorde),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(
+                              alpha: esOscuro ? 0.20 : 0.08,
+                            ),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                );
-              }
-
-              return ListView.builder(
-                padding: const EdgeInsets.only(left: 12, right: 12, bottom: 80),
-                itemCount: negocios.length,
-                itemBuilder: (context, index) {
-                  final negocio = negocios[index];
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    elevation: 3,
-                    child: Padding(
-                      padding: const EdgeInsets.all(15),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -252,96 +271,138 @@ class _NegociosScreenState extends State<NegociosScreen> {
                               const Icon(
                                 Icons.store,
                                 color: _colorPrincipal,
-                                size: 30,
+                                size: 22,
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 9),
                               Expanded(
                                 child: Text(
                                   negocio.nombre,
-                                  style: const TextStyle(
-                                    fontSize: 18,
+                                  style: TextStyle(
+                                    fontSize: 17,
                                     fontWeight: FontWeight.bold,
+                                    color: colorTexto,
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          const Divider(height: 25),
-                          _crearInformacion(
-                            Icons.location_on,
-                            'Dirección',
-                            negocio.direccion,
+                          const SizedBox(height: 10),
+                          Divider(height: 1, color: colorBorde),
+                          const SizedBox(height: 10),
+                          _datoNegocio(
+                            icono: Icons.location_on,
+                            titulo: 'Dirección',
+                            valor: negocio.direccion,
+                            colorTexto: colorTexto,
+                            colorSecundario: colorSecundario,
                           ),
-                          const SizedBox(height: 12),
-                          _crearInformacion(
-                            Icons.phone,
-                            'Teléfono',
-                            negocio.telefono,
+                          const SizedBox(height: 8),
+                          _datoNegocio(
+                            icono: Icons.phone,
+                            titulo: 'Teléfono',
+                            valor: negocio.telefono,
+                            colorTexto: colorTexto,
+                            colorSecundario: colorSecundario,
                           ),
-                          const SizedBox(height: 12),
-                          _crearInformacion(
-                            Icons.email,
-                            'Correo',
-                            negocio.correo,
+                          const SizedBox(height: 8),
+                          _datoNegocio(
+                            icono: Icons.email,
+                            titulo: 'Correo',
+                            valor: negocio.correo,
+                            colorTexto: colorTexto,
+                            colorSecundario: colorSecundario,
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 14),
                           Row(
                             children: [
                               Expanded(
                                 child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    _abrirFormularioEdicion(negocio);
-                                  },
-                                  icon: const Icon(Icons.edit),
-                                  label: const Text('Editar'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: _colorPrincipal,
                                     foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(25),
+                                    ),
                                   ),
+                                  onPressed: () {
+                                    _abrirFormulario(
+                                      context,
+                                      controller,
+                                      negocio: negocio,
+                                    );
+                                  },
+                                  icon: const Icon(Icons.edit, size: 18),
+                                  label: const Text('Editar'),
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 8),
                               Expanded(
                                 child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    _confirmarEliminacion(negocio);
-                                  },
-                                  icon: const Icon(Icons.delete),
-                                  label: const Text('Eliminar'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.red,
                                     foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(25),
+                                    ),
                                   ),
+                                  onPressed: () {
+                                    _confirmarEliminar(
+                                      context,
+                                      controller,
+                                      negocio,
+                                    );
+                                  },
+                                  icon: const Icon(Icons.delete, size: 18),
+                                  label: const Text('Eliminar'),
                                 ),
                               ),
                             ],
                           ),
                         ],
                       ),
-                    ),
-                  );
-                },
-              );
-            }),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _abrirFormularioRegistro,
-        backgroundColor: _colorPrincipal,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
+                    );
+                  },
+                );
+              }),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _crearInformacion(IconData icono, String titulo, String contenido) {
+  Widget _datoNegocio({
+    required IconData icono,
+    required String titulo,
+    required String valor,
+    required Color colorTexto,
+    required Color colorSecundario,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icono, color: _colorPrincipal),
+        Icon(icono, color: _colorPrincipal, size: 19),
         const SizedBox(width: 8),
-        Expanded(child: Text('$titulo: $contenido')),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: TextStyle(fontSize: 13, color: colorTexto),
+              children: [
+                TextSpan(
+                  text: '$titulo: ',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: colorSecundario,
+                  ),
+                ),
+                TextSpan(
+                  text: valor.isEmpty ? 'Sin información' : valor,
+                  style: TextStyle(color: colorTexto),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
