@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mi_inventario/controller/productos_controller.dart';
 import 'package:mi_inventario/model/productos_model.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -53,6 +54,52 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
         snackPosition: SnackPosition.BOTTOM,
       );
     }
+  }
+
+  Future<void> _mostrarSelectorFoto() async {
+    final tieneFoto =
+        controller.imagenSeleccionada.value != null ||
+        controller.fotoProductoUrl.value.isNotEmpty;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (bottomSheetContext) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Tomar foto'),
+                onTap: () {
+                  Navigator.of(bottomSheetContext).pop();
+                  controller.seleccionarImagenProducto(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Elegir de galería'),
+                onTap: () {
+                  Navigator.of(bottomSheetContext).pop();
+                  controller.seleccionarImagenProducto(ImageSource.gallery);
+                },
+              ),
+              if (tieneFoto)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Colors.red),
+                  title: const Text(
+                    'Quitar foto',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () {
+                    Navigator.of(bottomSheetContext).pop();
+                    controller.quitarFotoProducto();
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _escanearCodigo() async {
@@ -275,6 +322,69 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                   maxLines: 2,
                   validator: controller.validarCampoObligatorio,
                 ),
+                const SizedBox(height: 12),
+                Obx(() {
+                  final archivoLocal = controller.imagenSeleccionada.value;
+                  final urlExistente = controller.fotoProductoUrl.value;
+                  final tieneFoto =
+                      archivoLocal != null || urlExistente.isNotEmpty;
+
+                  Widget contenidoFoto;
+                  if (archivoLocal != null) {
+                    contenidoFoto = Image.file(archivoLocal, fit: BoxFit.cover);
+                  } else if (urlExistente.isNotEmpty) {
+                    contenidoFoto = Image.network(
+                      urlExistente,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.broken_image_outlined,
+                        color: Colors.grey,
+                      ),
+                    );
+                  } else {
+                    contenidoFoto = const Icon(
+                      Icons.add_a_photo_outlined,
+                      color: Colors.grey,
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: 72,
+                          height: 72,
+                          color: fieldFillColor,
+                          alignment: Alignment.center,
+                          child: contenidoFoto,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Foto del producto (opcional)',
+                              style: fieldTextStyle,
+                            ),
+                            const SizedBox(height: 8),
+                            OutlinedButton.icon(
+                              onPressed: controller.subiendoImagen.value
+                                  ? null
+                                  : _mostrarSelectorFoto,
+                              icon: const Icon(Icons.camera_alt_outlined),
+                              label: Text(
+                                tieneFoto ? 'Cambiar foto' : 'Agregar foto',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                }),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: controller.controladorCodigoProducto,
