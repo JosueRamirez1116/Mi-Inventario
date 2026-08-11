@@ -243,6 +243,16 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                   controller: controller.controladorNombre,
                   style: fieldTextStyle,
                   decoration: inputDecoration(labelText: 'Nombre del producto'),
+                  onChanged: (valor) {
+                    // Si es creación y aún no hay código, asignar uno incremental cuando empiece a escribir nombre
+                    if (!_esEdicion &&
+                        controller.controladorCodigoProducto.text
+                            .trim()
+                            .isEmpty &&
+                        valor.trim().isNotEmpty) {
+                      controller.asignarCodigoProductoIncremental();
+                    }
+                  },
                   validator: controller.validarCampoObligatorio,
                 ),
                 const SizedBox(height: 12),
@@ -257,7 +267,11 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                 TextFormField(
                   controller: controller.controladorCodigoProducto,
                   style: fieldTextStyle,
-                  decoration: inputDecoration(labelText: 'Código de producto'),
+                  readOnly: true,
+                  decoration: inputDecoration(labelText: 'Código de producto')
+                      .copyWith(
+                        helperText: 'Se asigna automáticamente (5 dígitos)',
+                      ),
                 ),
                 const SizedBox(height: 12),
 

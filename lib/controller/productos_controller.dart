@@ -168,6 +168,15 @@ class ProductosController extends GetxController {
       return;
     }
 
+    // Asegurarse de tener un código de producto. Si está vacío, generar uno incremental.
+    if (controladorCodigoProducto.text.trim().isEmpty) {
+      try {
+        await asignarCodigoProductoIncremental();
+      } catch (_) {
+        // en caso de fallo, continuar y dejar el campo vacío (la validación puede manejarlo si es obligatorio)
+      }
+    }
+
     estaGuardando.value = true;
     try {
       final nuevoProducto = ProductosModel(
@@ -219,6 +228,31 @@ class ProductosController extends GetxController {
     } finally {
       estaGuardando.value = false;
     }
+  }
+
+  /// Busca el código de producto más alto del usuario y asigna el siguiente
+  /// valor de 5 dígitos en `controladorCodigoProducto`.
+  Future<void> asignarCodigoProductoIncremental() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (uid.isEmpty) throw Exception('Usuario no autenticado');
+
+    final snapshot = await _referenciaProductos
+        .where('usuarioId', isEqualTo: uid)
+        .get();
+
+    int maxCodigo = 0;
+    for (final doc in snapshot.docs) {
+      final datos = doc.data();
+      final raw = (datos['codigoProducto'] ?? '').toString();
+      // Extraer solo dígitos
+      final digitsOnly = raw.replaceAll(RegExp(r'[^0-9]'), '');
+      final value = int.tryParse(digitsOnly);
+      if (value != null && value > maxCodigo) maxCodigo = value;
+    }
+
+    final siguiente = (maxCodigo + 1).clamp(0, 99999);
+    final codigoFormateado = siguiente.toString().padLeft(5, '0');
+    controladorCodigoProducto.text = codigoFormateado;
   }
 
   String? validarCampoObligatorio(String? valor) {
