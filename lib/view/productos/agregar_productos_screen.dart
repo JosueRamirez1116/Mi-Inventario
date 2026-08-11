@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mi_inventario/controller/productos_controller.dart';
 import 'package:mi_inventario/model/productos_model.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 /// Pantalla para ingresar los datos de un nuevo producto.
 class AgregarProductosScreen extends StatefulWidget {
@@ -31,6 +32,41 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
       controller.cargarProductoEnFormulario(widget.producto!);
     } else {
       controller.limpiarFormulario();
+    }
+  }
+
+  Future<void> _generarCodigo() async {
+    try {
+      final codigo = await controller.generarCodigoBarraEAN13Unico();
+      controller.controladorCodigoBarra.text = codigo;
+      Get.snackbar(
+        'Código generado',
+        'EAN-13: $codigo',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'No se pudo generar código: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  Future<void> _escanearCodigo() async {
+    try {
+      final resultado = await Navigator.of(context).push<String>(
+        MaterialPageRoute(builder: (_) => const _MobileScannerPage()),
+      );
+      if (resultado != null && resultado.isNotEmpty) {
+        controller.controladorCodigoBarra.text = resultado;
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'No se pudo escanear: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 
@@ -178,7 +214,8 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                 const SizedBox(height: 12),
                 Obx(
                   () => DropdownButtonFormField<String>(
-                    initialValue: controller.idCategoriaSeleccionada.value.isEmpty
+                    initialValue:
+                        controller.idCategoriaSeleccionada.value.isEmpty
                         ? null
                         : controller.idCategoriaSeleccionada.value,
                     decoration: inputDecoration(labelText: 'Categoría'),
@@ -227,9 +264,32 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                 TextFormField(
                   controller: controller.controladorCodigoBarra,
                   style: fieldTextStyle,
-                  decoration: inputDecoration(
-                    labelText: 'Código de barra (opcional)',
-                  ),
+                  decoration:
+                      inputDecoration(
+                        labelText: 'Código de barra (opcional)',
+                      ).copyWith(
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.auto_awesome,
+                                color: Colors.indigo,
+                              ),
+                              tooltip: 'Generar EAN-13',
+                              onPressed: _generarCodigo,
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.qr_code_scanner,
+                                color: Colors.indigo,
+                              ),
+                              tooltip: 'Escanear código',
+                              onPressed: _escanearCodigo,
+                            ),
+                          ],
+                        ),
+                      ),
                 ),
               ]),
               const SizedBox(height: 16),
@@ -362,6 +422,43 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _MobileScannerPage extends StatefulWidget {
+  const _MobileScannerPage({Key? key}) : super(key: key);
+
+  @override
+  State<_MobileScannerPage> createState() => _MobileScannerPageState();
+}
+
+class _MobileScannerPageState extends State<_MobileScannerPage> {
+  final MobileScannerController _cameraController = MobileScannerController();
+  bool _detected = false;
+
+  @override
+  void dispose() {
+    _cameraController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Escanear código')),
+      body: MobileScanner(
+        controller: _cameraController,
+        onDetect: (capture) {
+          if (_detected) return;
+          if (capture.barcodes.isEmpty) return;
+          final barcode = capture.barcodes.first;
+          final String? code = barcode.rawValue ?? barcode.displayValue;
+          if (code == null || code.isEmpty) return;
+          _detected = true;
+          Navigator.of(context).pop(code);
+        },
       ),
     );
   }
