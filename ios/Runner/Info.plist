@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Mi Inventario usa la cámara para escanear códigos de barra y tomar fotos de tus productos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Mi Inventario necesita acceso a tus fotos para seleccionar la imagen de un producto.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

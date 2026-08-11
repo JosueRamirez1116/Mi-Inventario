@@ -1,9 +1,13 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mi_inventario/model/productos_model.dart';
 
 /// Controlador de la pantalla "Agregar producto".
@@ -39,6 +43,15 @@ class ProductosController extends GetxController {
   final RxBool cargandoNegocios = false.obs;
   final RxBool cargandoCategorias = false.obs;
   final RxBool estaGuardando = false.obs;
+
+  final ImagePicker _selectorImagen = ImagePicker();
+
+  /// Imagen local recién elegida (cámara o galería), pendiente de subir.
+  final Rx<File?> imagenSeleccionada = Rx<File?>(null);
+
+  /// URL ya guardada en Firestore (modo edición) o resultante de una subida.
+  final RxString fotoProductoUrl = ''.obs;
+  final RxBool subiendoImagen = false.obs;
 
   @override
   void onInit() {
@@ -138,8 +151,70 @@ class ProductosController extends GetxController {
     controladorStockActual.clear();
     controladorPrecioCompra.clear();
     controladorPrecioVenta.clear();
+    imagenSeleccionada.value = null;
+    fotoProductoUrl.value = '';
 
     formularioKey.currentState?.reset();
+  }
+
+  /// Abre la cámara o la galería (según [origen]) para elegir la foto del
+  /// producto. image_picker solicita el permiso nativo necesario por su
+  /// cuenta; aquí solo se maneja el resultado y los casos de permiso denegado.
+  Future<void> seleccionarImagenProducto(ImageSource origen) async {
+    try {
+      final XFile? archivo = await _selectorImagen.pickImage(
+        source: origen,
+        maxWidth: 1280,
+        imageQuality: 80,
+      );
+      if (archivo == null) return;
+      imagenSeleccionada.value = File(archivo.path);
+    } on PlatformException catch (e) {
+      final esCamara = origen == ImageSource.camera;
+      if (e.code == 'camera_access_denied' || e.code == 'photo_access_denied') {
+        Get.snackbar(
+          'Permiso requerido',
+          esCamara
+              ? 'Habilita el permiso de cámara para esta app en los ajustes del dispositivo'
+              : 'Habilita el permiso de galería/fotos para esta app en los ajustes del dispositivo',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        Get.snackbar(
+          'Error',
+          'No se pudo obtener la imagen: ${e.message}',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'No se pudo obtener la imagen: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  /// Quita la foto local pendiente y/o la ya guardada, dejando el producto
+  /// sin imagen. El guardado la eliminará de Storage si corresponde.
+  void quitarFotoProducto() {
+    imagenSeleccionada.value = null;
+    fotoProductoUrl.value = '';
+  }
+
+  Future<String> _subirImagenProducto(File archivo, String uid) async {
+    final extension = archivo.path.contains('.')
+        ? archivo.path.split('.').last
+        : 'jpg';
+    final nombreArchivo = '${DateTime.now().millisecondsSinceEpoch}.$extension';
+    final referencia = FirebaseStorage.instance.ref().child(
+      'productos/$uid/$nombreArchivo',
+    );
+    await referencia.putFile(
+      archivo,
+      SettableMetadata(contentType: 'image/$extension'),
+    );
+    return referencia.getDownloadURL();
   }
 
   /// Valida el formulario y guarda el nuevo producto en Firestore.
@@ -177,14 +252,27 @@ class ProductosController extends GetxController {
       }
     }
 
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final urlAnterior = fotoProductoUrl.value;
+
     estaGuardando.value = true;
     try {
+      String urlFoto = fotoProductoUrl.value;
+      if (imagenSeleccionada.value != null) {
+        subiendoImagen.value = true;
+        try {
+          urlFoto = await _subirImagenProducto(imagenSeleccionada.value!, uid);
+        } finally {
+          subiendoImagen.value = false;
+        }
+      }
+
       final nuevoProducto = ProductosModel(
         nombreProducto: controladorNombre.text.trim(),
         descripcion: controladorDescripcion.text.trim(),
         idCategoria: idCategoriaSeleccionada.value,
         idNegocio: idNegocioSeleccionado.value,
-        usuarioId: FirebaseAuth.instance.currentUser?.uid ?? '',
+        usuarioId: uid,
         codigoBarra: controladorCodigoBarra.text.trim().isEmpty
             ? null
             : controladorCodigoBarra.text.trim(),
@@ -195,7 +283,7 @@ class ProductosController extends GetxController {
         stockActual: double.parse(controladorStockActual.text.trim()),
         precioCompra: double.parse(controladorPrecioCompra.text.trim()),
         precioVenta: double.parse(controladorPrecioVenta.text.trim()),
-        fotoProducto: '',
+        fotoProducto: urlFoto,
         codigoProducto: controladorCodigoProducto.text.trim(),
         fechaCreacion: DateTime.now(),
       );
@@ -207,6 +295,14 @@ class ProductosController extends GetxController {
           ...nuevoProducto.aMapa(),
           'fechaActualizacion': FieldValue.serverTimestamp(),
         });
+      }
+
+      // Si se reemplazó o se quitó una foto anterior, se borra de Storage.
+      // No es crítico para el guardado, así que un fallo aquí no interrumpe el flujo.
+      if (urlAnterior.isNotEmpty && urlAnterior != urlFoto) {
+        try {
+          await FirebaseStorage.instance.refFromURL(urlAnterior).delete();
+        } catch (_) {}
       }
 
       limpiarFormulario();
@@ -283,6 +379,8 @@ class ProductosController extends GetxController {
     controladorStockActual.text = producto.stockActual.toString();
     controladorPrecioCompra.text = producto.precioCompra.toString();
     controladorPrecioVenta.text = producto.precioVenta.toString();
+    imagenSeleccionada.value = null;
+    fotoProductoUrl.value = producto.fotoProducto;
 
     idNegocioSeleccionado.value = producto.idNegocio;
     await cargarCategoriasDelNegocio(producto.idNegocio);
