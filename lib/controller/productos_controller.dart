@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -30,8 +32,10 @@ class ProductosController extends GetxController {
 
   final RxString idNegocioSeleccionado = ''.obs;
   final RxString idCategoriaSeleccionada = ''.obs;
-  final RxList<Map<String, String>> negociosUsuario = <Map<String, String>>[].obs;
-  final RxList<Map<String, String>> categoriasNegocio = <Map<String, String>>[].obs;
+  final RxList<Map<String, String>> negociosUsuario =
+      <Map<String, String>>[].obs;
+  final RxList<Map<String, String>> categoriasNegocio =
+      <Map<String, String>>[].obs;
   final RxBool cargandoNegocios = false.obs;
   final RxBool cargandoCategorias = false.obs;
   final RxBool estaGuardando = false.obs;
@@ -57,7 +61,8 @@ class ProductosController extends GetxController {
       negociosUsuario.assignAll(
         snapshot.docs.map((doc) {
           final datos = doc.data();
-          final nombre = datos['nombre']?.toString() ??
+          final nombre =
+              datos['nombre']?.toString() ??
               datos['nombreNegocio']?.toString() ??
               'Sin nombre';
           return {'id': doc.id, 'nombre': nombre};
@@ -109,7 +114,9 @@ class ProductosController extends GetxController {
       );
 
       if (categoriasNegocio.isNotEmpty) {
-        if (!categoriasNegocio.any((categoria) => categoria['id'] == idCategoriaSeleccionada.value)) {
+        if (!categoriasNegocio.any(
+          (categoria) => categoria['id'] == idCategoriaSeleccionada.value,
+        )) {
           idCategoriaSeleccionada.value = categoriasNegocio.first['id'] ?? '';
         }
       } else {
@@ -143,7 +150,10 @@ class ProductosController extends GetxController {
       return;
     }
     if (idCategoriaSeleccionada.value.isEmpty) {
-      Get.snackbar('Datos inválidos', 'Selecciona una categoría antes de guardar');
+      Get.snackbar(
+        'Datos inválidos',
+        'Selecciona una categoría antes de guardar',
+      );
       return;
     }
 
@@ -252,6 +262,50 @@ class ProductosController extends GetxController {
     });
   }
 
+  /// Genera un código de barra
+  Future<String> generarCodigoBarraEAN13Unico({
+    int intentosMaximos = 20,
+  }) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (uid.isEmpty) throw Exception('Usuario no autenticado');
+
+    int intentos = 0;
+    while (intentos < intentosMaximos) {
+      final base12 = List.generate(12, (_) => Random().nextInt(10)).join();
+      final checksum = _calcularChecksumEAN13(base12);
+      final codigo = '$base12$checksum';
+
+      final consulta = await _referenciaProductos
+          .where('usuarioId', isEqualTo: uid)
+          .where('codigoBarra', isEqualTo: codigo)
+          .get();
+
+      if (consulta.docs.isEmpty) {
+        return codigo;
+      }
+
+      intentos++;
+    }
+
+    throw Exception(
+      'No se pudo generar un código único tras $intentosMaximos intentos',
+    );
+  }
+
+  int _calcularChecksumEAN13(String base12) {
+    if (base12.length != 12)
+      throw ArgumentError('base12 debe tener 12 dígitos');
+    final digits = base12.split('').map(int.parse).toList();
+    int suma = 0;
+    for (var i = 0; i < digits.length; i++) {
+      // posiciones 1-based: impares *1, pares *3
+      final posicion = i + 1;
+      suma += digits[i] * (posicion % 2 == 1 ? 1 : 3);
+    }
+    final mod = suma % 10;
+    return (10 - mod) % 10;
+  }
+
   Future<void> registrarMovimiento({
     required ProductosModel producto,
     required String tipoMovimiento,
@@ -271,7 +325,8 @@ class ProductosController extends GetxController {
       }
 
       final datosProducto = snapshotProducto.data() ?? <String, dynamic>{};
-      final stockActual = (datosProducto['stockActual'] as num?)?.toDouble() ?? 0;
+      final stockActual =
+          (datosProducto['stockActual'] as num?)?.toDouble() ?? 0;
 
       if (tipoMovimiento == 'Salida' && cantidad > stockActual) {
         throw Exception(
@@ -295,7 +350,10 @@ class ProductosController extends GetxController {
         'codigoProducto': datosProducto['codigoProducto'] ?? '',
         'idCategoria': datosProducto['idCategoria'] ?? '',
         'idNegocio': datosProducto['idNegocio'] ?? '',
-        'usuarioId': datosProducto['usuarioId'] ?? FirebaseAuth.instance.currentUser?.uid ?? '',
+        'usuarioId':
+            datosProducto['usuarioId'] ??
+            FirebaseAuth.instance.currentUser?.uid ??
+            '',
         'tipoMovimiento': tipoMovimiento,
         'cantidad': cantidad,
         'stockAnterior': stockActual,
