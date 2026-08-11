@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:mi_inventario/controller/productos_controller.dart';
 import 'package:mi_inventario/model/productos_model.dart';
 import 'package:mi_inventario/view/productos/agregar_productos_screen.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 /// Filtra una lista de productos (representados como mapas) por coincidencia
 /// parcial en el nombre. Se mantiene aquí para compatibilidad con pruebas
@@ -105,6 +106,25 @@ class _InventarioScreenState extends State<InventarioScreen> {
     );
   }
 
+  Future<void> _escanearYBuscar() async {
+    try {
+      final codigo = await Navigator.of(context).push<String>(
+        MaterialPageRoute(builder: (_) => const _InventarioScannerPage()),
+      );
+      if (codigo != null && codigo.isNotEmpty) {
+        setState(() {
+          _textoBusqueda = codigo;
+          _busquedaController.text = codigo;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al escanear: $e')));
+    }
+  }
+
   Future<void> _abrirFormularioEdicion(ProductosModel producto) async {
     await Navigator.push<bool>(
       context,
@@ -181,7 +201,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
                     initialValue: tipoMovimiento,
                     decoration: const InputDecoration(labelText: 'Tipo'),
                     items: const [
-                      DropdownMenuItem(value: 'Entrada', child: Text('Entrada')),
+                      DropdownMenuItem(
+                        value: 'Entrada',
+                        child: Text('Entrada'),
+                      ),
                       DropdownMenuItem(value: 'Salida', child: Text('Salida')),
                     ],
                     onChanged: guardando
@@ -254,7 +277,9 @@ class _InventarioScreenState extends State<InventarioScreen> {
                           } catch (error) {
                             setDialogState(() => guardando = false);
                             ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              SnackBar(content: Text('No se pudo guardar: $error')),
+                              SnackBar(
+                                content: Text('No se pudo guardar: $error'),
+                              ),
                             );
                           }
                         },
@@ -285,7 +310,8 @@ class _InventarioScreenState extends State<InventarioScreen> {
     Map<String, String> categoriasPorId,
     Map<String, String> negociosPorId,
   ) async {
-    final nombreCategoria = categoriasPorId[producto.idCategoria] ?? 'Sin categoría';
+    final nombreCategoria =
+        categoriasPorId[producto.idCategoria] ?? 'Sin categoría';
     final nombreNegocio = negociosPorId[producto.idNegocio] ?? 'Sin negocio';
 
     await showDialog<void>(
@@ -303,7 +329,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
                 _info('Negocio', nombreNegocio),
                 _info('Stock actual', producto.stockActual.toStringAsFixed(2)),
                 _info('Unidad', producto.unidadMedida),
-                _info('Precio compra', producto.precioCompra.toStringAsFixed(2)),
+                _info(
+                  'Precio compra',
+                  producto.precioCompra.toStringAsFixed(2),
+                ),
                 _info('Precio venta', producto.precioVenta.toStringAsFixed(2)),
                 _info('Descripción', producto.descripcion),
               ],
@@ -390,11 +419,13 @@ class _InventarioScreenState extends State<InventarioScreen> {
     final busqueda = _textoBusqueda.trim().toLowerCase();
 
     return productos.where((producto) {
-      if (_filtroCategoriaId.isNotEmpty && producto.idCategoria != _filtroCategoriaId) {
+      if (_filtroCategoriaId.isNotEmpty &&
+          producto.idCategoria != _filtroCategoriaId) {
         return false;
       }
 
-      if (_filtroNegocioId.isNotEmpty && producto.idNegocio != _filtroNegocioId) {
+      if (_filtroNegocioId.isNotEmpty &&
+          producto.idNegocio != _filtroNegocioId) {
         return false;
       }
 
@@ -402,14 +433,24 @@ class _InventarioScreenState extends State<InventarioScreen> {
         return true;
       }
 
-      final categoriaNombre =
-          (categoriasPorId[producto.idCategoria] ?? '').toLowerCase();
+      final categoriaNombre = (categoriasPorId[producto.idCategoria] ?? '')
+          .toLowerCase();
 
-      final coincideCodigo = producto.codigoProducto.toLowerCase().contains(busqueda);
-      final coincideNombre = producto.nombreProducto.toLowerCase().contains(busqueda);
+      final coincideCodigo = producto.codigoProducto.toLowerCase().contains(
+        busqueda,
+      );
+      final coincideCodigoBarra = (producto.codigoBarra ?? '')
+          .toLowerCase()
+          .contains(busqueda);
+      final coincideNombre = producto.nombreProducto.toLowerCase().contains(
+        busqueda,
+      );
       final coincideCategoria = categoriaNombre.contains(busqueda);
 
-      return coincideCodigo || coincideNombre || coincideCategoria;
+      return coincideCodigo ||
+          coincideCodigoBarra ||
+          coincideNombre ||
+          coincideCategoria;
     }).toList();
   }
 
@@ -470,13 +511,15 @@ class _InventarioScreenState extends State<InventarioScreen> {
               final categoriasVisibles = _filtroNegocioId.isEmpty
                   ? categoriasDocs
                   : categoriasDocs.where((doc) {
-                      final negocioIdCategoria =
-                          (doc.data()['negocioId'] ?? '').toString();
+                      final negocioIdCategoria = (doc.data()['negocioId'] ?? '')
+                          .toString();
                       return negocioIdCategoria == _filtroNegocioId;
                     }).toList();
 
               if (_filtroCategoriaId.isNotEmpty &&
-                  !categoriasVisibles.any((doc) => doc.id == _filtroCategoriaId)) {
+                  !categoriasVisibles.any(
+                    (doc) => doc.id == _filtroCategoriaId,
+                  )) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (!mounted) {
                     return;
@@ -498,14 +541,14 @@ class _InventarioScreenState extends State<InventarioScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  final productos = productosSnapshot.data!.docs.map((doc) {
-                    return ProductosModel.desdeMapa(doc.data(), doc.id);
-                  }).toList()
-                    ..sort(
-                      (a, b) => a.nombreProducto.toLowerCase().compareTo(
-                        b.nombreProducto.toLowerCase(),
-                      ),
-                    );
+                  final productos =
+                      productosSnapshot.data!.docs.map((doc) {
+                        return ProductosModel.desdeMapa(doc.data(), doc.id);
+                      }).toList()..sort(
+                        (a, b) => a.nombreProducto.toLowerCase().compareTo(
+                          b.nombreProducto.toLowerCase(),
+                        ),
+                      );
 
                   final productosFiltrados = _aplicarFiltros(
                     productos: productos,
@@ -524,11 +567,16 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                 setState(() => _textoBusqueda = valor);
                               },
                               decoration: InputDecoration(
-                                labelText: 'Buscar por código, nombre o categoría',
+                                labelText:
+                                    'Buscar por código, nombre, categoría o código de barra',
                                 prefixIcon: const Icon(Icons.search),
                                 border: const OutlineInputBorder(),
                                 suffixIcon: _textoBusqueda.isEmpty
-                                    ? null
+                                    ? IconButton(
+                                        onPressed: _escanearYBuscar,
+                                        icon: const Icon(Icons.qr_code_scanner),
+                                        tooltip: 'Escanear código',
+                                      )
                                     : IconButton(
                                         onPressed: () {
                                           setState(() {
@@ -556,16 +604,21 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                     isExpanded: true,
                                     items: categoriasVisibles.map((doc) {
                                       final nombre =
-                                          (doc.data()['nombre'] ?? '').toString();
+                                          (doc.data()['nombre'] ?? '')
+                                              .toString();
                                       return DropdownMenuItem(
                                         value: doc.id,
                                         child: Text(
-                                          nombre.isEmpty ? 'Sin nombre' : nombre,
+                                          nombre.isEmpty
+                                              ? 'Sin nombre'
+                                              : nombre,
                                         ),
                                       );
                                     }).toList(),
                                     onChanged: (value) {
-                                      setState(() => _filtroCategoriaId = value ?? '');
+                                      setState(
+                                        () => _filtroCategoriaId = value ?? '',
+                                      );
                                     },
                                   ),
                                 ),
@@ -583,11 +636,14 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                     isExpanded: true,
                                     items: negociosDocs.map((doc) {
                                       final nombre =
-                                          (doc.data()['nombre'] ?? '').toString();
+                                          (doc.data()['nombre'] ?? '')
+                                              .toString();
                                       return DropdownMenuItem(
                                         value: doc.id,
                                         child: Text(
-                                          nombre.isEmpty ? 'Sin nombre' : nombre,
+                                          nombre.isEmpty
+                                              ? 'Sin nombre'
+                                              : nombre,
                                         ),
                                       );
                                     }).toList(),
@@ -619,7 +675,12 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                 child: Text('No hay productos para mostrar'),
                               )
                             : ListView.builder(
-                                padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                                padding: const EdgeInsets.fromLTRB(
+                                  12,
+                                  4,
+                                  12,
+                                  12,
+                                ),
                                 itemCount: productosFiltrados.length,
                                 itemBuilder: (context, index) {
                                   final producto = productosFiltrados[index];
@@ -630,17 +691,20 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                   return Card(
                                     margin: const EdgeInsets.only(bottom: 10),
                                     child: InkWell(
-                                      onDoubleTap: () => _mostrarDetalleProducto(
-                                        producto,
-                                        categoriasPorId,
-                                        negociosPorId,
-                                      ),
+                                      onDoubleTap: () =>
+                                          _mostrarDetalleProducto(
+                                            producto,
+                                            categoriasPorId,
+                                            negociosPorId,
+                                          ),
                                       borderRadius: BorderRadius.circular(12),
                                       child: Padding(
                                         padding: const EdgeInsets.all(12),
                                         child: Row(
                                           children: [
-                                            _buildFotoProducto(producto.fotoProducto),
+                                            _buildFotoProducto(
+                                              producto.fotoProducto,
+                                            ),
                                             const SizedBox(width: 12),
                                             Expanded(
                                               child: Column(
@@ -650,13 +714,18 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                                   Text(
                                                     producto.nombreProducto,
                                                     style: const TextStyle(
-                                                      fontWeight: FontWeight.bold,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                       fontSize: 16,
                                                     ),
                                                   ),
                                                   const SizedBox(height: 4),
-                                                  Text('Stock: ${producto.stockActual}'),
-                                                  Text('Categoría: $nombreCategoria'),
+                                                  Text(
+                                                    'Stock: ${producto.stockActual}',
+                                                  ),
+                                                  Text(
+                                                    'Categoría: $nombreCategoria',
+                                                  ),
                                                 ],
                                               ),
                                             ),
@@ -681,6 +750,43 @@ class _InventarioScreenState extends State<InventarioScreen> {
         backgroundColor: _colorPrincipal,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class _InventarioScannerPage extends StatefulWidget {
+  const _InventarioScannerPage({Key? key}) : super(key: key);
+
+  @override
+  State<_InventarioScannerPage> createState() => _InventarioScannerPageState();
+}
+
+class _InventarioScannerPageState extends State<_InventarioScannerPage> {
+  final MobileScannerController _cameraController = MobileScannerController();
+  bool _detected = false;
+
+  @override
+  void dispose() {
+    _cameraController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Escanear código')),
+      body: MobileScanner(
+        controller: _cameraController,
+        onDetect: (capture) {
+          if (_detected) return;
+          if (capture.barcodes.isEmpty) return;
+          final barcode = capture.barcodes.first;
+          final String? code = barcode.rawValue ?? barcode.displayValue;
+          if (code == null || code.isEmpty) return;
+          _detected = true;
+          Navigator.of(context).pop(code);
+        },
       ),
     );
   }
