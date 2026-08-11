@@ -220,51 +220,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         return StatefulBuilder(
-<<<<<<< HEAD
           builder: (context, setSheetState) {
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
-=======
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Registrar movimiento'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<String>(
-                    key: ValueKey('mov-$tipoMovimiento'),
-                    initialValue: tipoMovimiento,
-                    decoration: const InputDecoration(labelText: 'Tipo'),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'Entrada',
-                        child: Text('Entrada'),
-                      ),
-                      DropdownMenuItem(value: 'Salida', child: Text('Salida')),
-                    ],
-                    onChanged: guardando
-                        ? null
-                        : (value) {
-                            if (value == null) {
-                              return;
-                            }
-                            setDialogState(() => tipoMovimiento = value);
-                          },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: cantidadController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: 'Cantidad',
-                      hintText: 'Ingresa una cantidad mayor a 0',
-                    ),
-                  ),
-                ],
->>>>>>> main
               ),
               child: Container(
                 decoration: const BoxDecoration(
@@ -340,7 +299,6 @@ class _InventarioScreenState extends State<InventarioScreen> {
                               setSheetState(() => bodegaId = value);
                             },
                           );
-<<<<<<< HEAD
                         },
                       ),
                       const SizedBox(height: 14),
@@ -364,46 +322,6 @@ class _InventarioScreenState extends State<InventarioScreen> {
                           );
                           if (seleccionada != null) {
                             setSheetState(() => fecha = seleccionada);
-=======
-                          if (cantidad == null || cantidad <= 0) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Ingresa una cantidad numérica mayor a 0',
-                                ),
-                              ),
-                            );
-                            return;
-                          }
-
-                          setDialogState(() => guardando = true);
-                          try {
-                            await _controller.registrarMovimiento(
-                              producto: producto,
-                              tipoMovimiento: tipoMovimiento,
-                              cantidad: cantidad,
-                            );
-
-                            if (!dialogContext.mounted) {
-                              return;
-                            }
-                            Navigator.of(dialogContext).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Movimiento $tipoMovimiento registrado',
-                                ),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          } catch (error) {
-                            setDialogState(() => guardando = false);
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              SnackBar(
-                                content: Text('No se pudo guardar: $error'),
-                              ),
-                            );
->>>>>>> main
                           }
                         },
                         child: InputDecorator(
@@ -543,7 +461,6 @@ class _InventarioScreenState extends State<InventarioScreen> {
 
     await showModalBottomSheet<void>(
       context: context,
-<<<<<<< HEAD
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
@@ -667,61 +584,6 @@ class _InventarioScreenState extends State<InventarioScreen> {
               ),
             );
           },
-=======
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(producto.nombreProducto),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _info('Código', producto.codigoProducto),
-                _info('Categoría', nombreCategoria),
-                _info('Negocio', nombreNegocio),
-                _info('Stock actual', producto.stockActual.toStringAsFixed(2)),
-                _info('Unidad', producto.unidadMedida),
-                _info(
-                  'Precio compra',
-                  producto.precioCompra.toStringAsFixed(2),
-                ),
-                _info('Precio venta', producto.precioVenta.toStringAsFixed(2)),
-                _info('Descripción', producto.descripcion),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cerrar'),
-            ),
-            TextButton.icon(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                _abrirFormularioEdicion(producto);
-              },
-              icon: const Icon(Icons.edit),
-              label: const Text('Modificar'),
-            ),
-            TextButton.icon(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                _mostrarDialogoMovimiento(producto);
-              },
-              icon: const Icon(Icons.swap_horiz),
-              label: const Text('Entrada / Salida'),
-            ),
-            TextButton.icon(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                _confirmarEliminacion(producto);
-              },
-              icon: const Icon(Icons.delete),
-              label: const Text('Eliminar'),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-            ),
-          ],
->>>>>>> main
         );
       },
     );
@@ -1138,7 +1000,6 @@ class _InventarioScreenState extends State<InventarioScreen> {
   }
 }
 
-<<<<<<< HEAD
 /// Botón circular con etiqueta debajo, usado para las acciones rápidas
 /// (Modificar / Ingreso / Salida) de cada tarjeta de producto.
 class _AccionProducto extends StatelessWidget {
@@ -1189,7 +1050,7 @@ class _AccionProducto extends StatelessWidget {
     );
   }
 }
-=======
+
 class _InventarioScannerPage extends StatefulWidget {
   const _InventarioScannerPage({Key? key}) : super(key: key);
 
@@ -1226,4 +1087,3 @@ class _InventarioScannerPageState extends State<_InventarioScannerPage> {
     );
   }
 }
->>>>>>> main
