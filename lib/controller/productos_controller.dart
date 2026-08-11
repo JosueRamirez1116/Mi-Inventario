@@ -1,7 +1,13 @@
+import 'dart:io';
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mi_inventario/model/productos_model.dart';
 
 /// Controlador de la pantalla "Agregar producto".
@@ -30,11 +36,22 @@ class ProductosController extends GetxController {
 
   final RxString idNegocioSeleccionado = ''.obs;
   final RxString idCategoriaSeleccionada = ''.obs;
-  final RxList<Map<String, String>> negociosUsuario = <Map<String, String>>[].obs;
-  final RxList<Map<String, String>> categoriasNegocio = <Map<String, String>>[].obs;
+  final RxList<Map<String, String>> negociosUsuario =
+      <Map<String, String>>[].obs;
+  final RxList<Map<String, String>> categoriasNegocio =
+      <Map<String, String>>[].obs;
   final RxBool cargandoNegocios = false.obs;
   final RxBool cargandoCategorias = false.obs;
   final RxBool estaGuardando = false.obs;
+
+  final ImagePicker _selectorImagen = ImagePicker();
+
+  /// Imagen local recién elegida (cámara o galería), pendiente de subir.
+  final Rx<File?> imagenSeleccionada = Rx<File?>(null);
+
+  /// URL ya guardada en Firestore (modo edición) o resultante de una subida.
+  final RxString fotoProductoUrl = ''.obs;
+  final RxBool subiendoImagen = false.obs;
 
   @override
   void onInit() {
@@ -57,7 +74,8 @@ class ProductosController extends GetxController {
       negociosUsuario.assignAll(
         snapshot.docs.map((doc) {
           final datos = doc.data();
-          final nombre = datos['nombre']?.toString() ??
+          final nombre =
+              datos['nombre']?.toString() ??
               datos['nombreNegocio']?.toString() ??
               'Sin nombre';
           return {'id': doc.id, 'nombre': nombre};
@@ -109,7 +127,9 @@ class ProductosController extends GetxController {
       );
 
       if (categoriasNegocio.isNotEmpty) {
-        if (!categoriasNegocio.any((categoria) => categoria['id'] == idCategoriaSeleccionada.value)) {
+        if (!categoriasNegocio.any(
+          (categoria) => categoria['id'] == idCategoriaSeleccionada.value,
+        )) {
           idCategoriaSeleccionada.value = categoriasNegocio.first['id'] ?? '';
         }
       } else {
@@ -131,8 +151,70 @@ class ProductosController extends GetxController {
     controladorStockActual.clear();
     controladorPrecioCompra.clear();
     controladorPrecioVenta.clear();
+    imagenSeleccionada.value = null;
+    fotoProductoUrl.value = '';
 
     formularioKey.currentState?.reset();
+  }
+
+  /// Abre la cámara o la galería (según [origen]) para elegir la foto del
+  /// producto. image_picker solicita el permiso nativo necesario por su
+  /// cuenta; aquí solo se maneja el resultado y los casos de permiso denegado.
+  Future<void> seleccionarImagenProducto(ImageSource origen) async {
+    try {
+      final XFile? archivo = await _selectorImagen.pickImage(
+        source: origen,
+        maxWidth: 1280,
+        imageQuality: 80,
+      );
+      if (archivo == null) return;
+      imagenSeleccionada.value = File(archivo.path);
+    } on PlatformException catch (e) {
+      final esCamara = origen == ImageSource.camera;
+      if (e.code == 'camera_access_denied' || e.code == 'photo_access_denied') {
+        Get.snackbar(
+          'Permiso requerido',
+          esCamara
+              ? 'Habilita el permiso de cámara para esta app en los ajustes del dispositivo'
+              : 'Habilita el permiso de galería/fotos para esta app en los ajustes del dispositivo',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        Get.snackbar(
+          'Error',
+          'No se pudo obtener la imagen: ${e.message}',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'No se pudo obtener la imagen: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  /// Quita la foto local pendiente y/o la ya guardada, dejando el producto
+  /// sin imagen. El guardado la eliminará de Storage si corresponde.
+  void quitarFotoProducto() {
+    imagenSeleccionada.value = null;
+    fotoProductoUrl.value = '';
+  }
+
+  Future<String> _subirImagenProducto(File archivo, String uid) async {
+    final extension = archivo.path.contains('.')
+        ? archivo.path.split('.').last
+        : 'jpg';
+    final nombreArchivo = '${DateTime.now().millisecondsSinceEpoch}.$extension';
+    final referencia = FirebaseStorage.instance.ref().child(
+      'productos/$uid/$nombreArchivo',
+    );
+    await referencia.putFile(
+      archivo,
+      SettableMetadata(contentType: 'image/$extension'),
+    );
+    return referencia.getDownloadURL();
   }
 
   /// Valida el formulario y guarda el nuevo producto en Firestore.
@@ -143,7 +225,10 @@ class ProductosController extends GetxController {
       return;
     }
     if (idCategoriaSeleccionada.value.isEmpty) {
-      Get.snackbar('Datos inválidos', 'Selecciona una categoría antes de guardar');
+      Get.snackbar(
+        'Datos inválidos',
+        'Selecciona una categoría antes de guardar',
+      );
       return;
     }
 
@@ -158,14 +243,36 @@ class ProductosController extends GetxController {
       return;
     }
 
+    // Asegurarse de tener un código de producto. Si está vacío, generar uno incremental.
+    if (controladorCodigoProducto.text.trim().isEmpty) {
+      try {
+        await asignarCodigoProductoIncremental();
+      } catch (_) {
+        // en caso de fallo, continuar y dejar el campo vacío (la validación puede manejarlo si es obligatorio)
+      }
+    }
+
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final urlAnterior = fotoProductoUrl.value;
+
     estaGuardando.value = true;
     try {
+      String urlFoto = fotoProductoUrl.value;
+      if (imagenSeleccionada.value != null) {
+        subiendoImagen.value = true;
+        try {
+          urlFoto = await _subirImagenProducto(imagenSeleccionada.value!, uid);
+        } finally {
+          subiendoImagen.value = false;
+        }
+      }
+
       final nuevoProducto = ProductosModel(
         nombreProducto: controladorNombre.text.trim(),
         descripcion: controladorDescripcion.text.trim(),
         idCategoria: idCategoriaSeleccionada.value,
         idNegocio: idNegocioSeleccionado.value,
-        usuarioId: FirebaseAuth.instance.currentUser?.uid ?? '',
+        usuarioId: uid,
         codigoBarra: controladorCodigoBarra.text.trim().isEmpty
             ? null
             : controladorCodigoBarra.text.trim(),
@@ -176,7 +283,7 @@ class ProductosController extends GetxController {
         stockActual: double.parse(controladorStockActual.text.trim()),
         precioCompra: double.parse(controladorPrecioCompra.text.trim()),
         precioVenta: double.parse(controladorPrecioVenta.text.trim()),
-        fotoProducto: '',
+        fotoProducto: urlFoto,
         codigoProducto: controladorCodigoProducto.text.trim(),
         fechaCreacion: DateTime.now(),
       );
@@ -188,6 +295,14 @@ class ProductosController extends GetxController {
           ...nuevoProducto.aMapa(),
           'fechaActualizacion': FieldValue.serverTimestamp(),
         });
+      }
+
+      // Si se reemplazó o se quitó una foto anterior, se borra de Storage.
+      // No es crítico para el guardado, así que un fallo aquí no interrumpe el flujo.
+      if (urlAnterior.isNotEmpty && urlAnterior != urlFoto) {
+        try {
+          await FirebaseStorage.instance.refFromURL(urlAnterior).delete();
+        } catch (_) {}
       }
 
       limpiarFormulario();
@@ -209,6 +324,31 @@ class ProductosController extends GetxController {
     } finally {
       estaGuardando.value = false;
     }
+  }
+
+  /// Busca el código de producto más alto del usuario y asigna el siguiente
+  /// valor de 5 dígitos en `controladorCodigoProducto`.
+  Future<void> asignarCodigoProductoIncremental() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (uid.isEmpty) throw Exception('Usuario no autenticado');
+
+    final snapshot = await _referenciaProductos
+        .where('usuarioId', isEqualTo: uid)
+        .get();
+
+    int maxCodigo = 0;
+    for (final doc in snapshot.docs) {
+      final datos = doc.data();
+      final raw = (datos['codigoProducto'] ?? '').toString();
+      // Extraer solo dígitos
+      final digitsOnly = raw.replaceAll(RegExp(r'[^0-9]'), '');
+      final value = int.tryParse(digitsOnly);
+      if (value != null && value > maxCodigo) maxCodigo = value;
+    }
+
+    final siguiente = (maxCodigo + 1).clamp(0, 99999);
+    final codigoFormateado = siguiente.toString().padLeft(5, '0');
+    controladorCodigoProducto.text = codigoFormateado;
   }
 
   String? validarCampoObligatorio(String? valor) {
@@ -239,6 +379,8 @@ class ProductosController extends GetxController {
     controladorStockActual.text = producto.stockActual.toString();
     controladorPrecioCompra.text = producto.precioCompra.toString();
     controladorPrecioVenta.text = producto.precioVenta.toString();
+    imagenSeleccionada.value = null;
+    fotoProductoUrl.value = producto.fotoProducto;
 
     idNegocioSeleccionado.value = producto.idNegocio;
     await cargarCategoriasDelNegocio(producto.idNegocio);
@@ -250,6 +392,50 @@ class ProductosController extends GetxController {
       'estado': 0,
       'fechaActualizacion': FieldValue.serverTimestamp(),
     });
+  }
+
+  /// Genera un código de barra
+  Future<String> generarCodigoBarraEAN13Unico({
+    int intentosMaximos = 20,
+  }) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (uid.isEmpty) throw Exception('Usuario no autenticado');
+
+    int intentos = 0;
+    while (intentos < intentosMaximos) {
+      final base12 = List.generate(12, (_) => Random().nextInt(10)).join();
+      final checksum = _calcularChecksumEAN13(base12);
+      final codigo = '$base12$checksum';
+
+      final consulta = await _referenciaProductos
+          .where('usuarioId', isEqualTo: uid)
+          .where('codigoBarra', isEqualTo: codigo)
+          .get();
+
+      if (consulta.docs.isEmpty) {
+        return codigo;
+      }
+
+      intentos++;
+    }
+
+    throw Exception(
+      'No se pudo generar un código único tras $intentosMaximos intentos',
+    );
+  }
+
+  int _calcularChecksumEAN13(String base12) {
+    if (base12.length != 12)
+      throw ArgumentError('base12 debe tener 12 dígitos');
+    final digits = base12.split('').map(int.parse).toList();
+    int suma = 0;
+    for (var i = 0; i < digits.length; i++) {
+      // posiciones 1-based: impares *1, pares *3
+      final posicion = i + 1;
+      suma += digits[i] * (posicion % 2 == 1 ? 1 : 3);
+    }
+    final mod = suma % 10;
+    return (10 - mod) % 10;
   }
 
   Future<void> registrarMovimiento({
@@ -275,7 +461,8 @@ class ProductosController extends GetxController {
       }
 
       final datosProducto = snapshotProducto.data() ?? <String, dynamic>{};
-      final stockActual = (datosProducto['stockActual'] as num?)?.toDouble() ?? 0;
+      final stockActual =
+          (datosProducto['stockActual'] as num?)?.toDouble() ?? 0;
 
       if (tipoMovimiento == 'Salida' && cantidad > stockActual) {
         throw Exception(
@@ -299,7 +486,10 @@ class ProductosController extends GetxController {
         'codigoProducto': datosProducto['codigoProducto'] ?? '',
         'idCategoria': datosProducto['idCategoria'] ?? '',
         'idNegocio': datosProducto['idNegocio'] ?? '',
-        'usuarioId': datosProducto['usuarioId'] ?? FirebaseAuth.instance.currentUser?.uid ?? '',
+        'usuarioId':
+            datosProducto['usuarioId'] ??
+            FirebaseAuth.instance.currentUser?.uid ??
+            '',
         'tipoMovimiento': tipoMovimiento,
         'cantidad': cantidad,
         'stockAnterior': stockActual,

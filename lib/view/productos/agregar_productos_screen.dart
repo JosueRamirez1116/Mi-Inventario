@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mi_inventario/controller/productos_controller.dart';
 import 'package:mi_inventario/model/productos_model.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 /// Pantalla para ingresar los datos de un nuevo producto.
 class AgregarProductosScreen extends StatefulWidget {
@@ -15,6 +17,8 @@ class AgregarProductosScreen extends StatefulWidget {
 
 class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
   late final ProductosController controller;
+  TextEditingController? _unidadAutocompleteController;
+  VoidCallback? _unidadAutocompleteListener;
 
   bool get _esEdicion => widget.producto != null;
 
@@ -34,8 +38,99 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
     }
   }
 
+  Future<void> _generarCodigo() async {
+    try {
+      final codigo = await controller.generarCodigoBarraEAN13Unico();
+      controller.controladorCodigoBarra.text = codigo;
+      Get.snackbar(
+        'Código generado',
+        'EAN-13: $codigo',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'No se pudo generar código: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  Future<void> _mostrarSelectorFoto() async {
+    final tieneFoto =
+        controller.imagenSeleccionada.value != null ||
+        controller.fotoProductoUrl.value.isNotEmpty;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (bottomSheetContext) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Tomar foto'),
+                onTap: () {
+                  Navigator.of(bottomSheetContext).pop();
+                  controller.seleccionarImagenProducto(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Elegir de galería'),
+                onTap: () {
+                  Navigator.of(bottomSheetContext).pop();
+                  controller.seleccionarImagenProducto(ImageSource.gallery);
+                },
+              ),
+              if (tieneFoto)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Colors.red),
+                  title: const Text(
+                    'Quitar foto',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () {
+                    Navigator.of(bottomSheetContext).pop();
+                    controller.quitarFotoProducto();
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _escanearCodigo() async {
+    try {
+      final resultado = await Navigator.of(context).push<String>(
+        MaterialPageRoute(builder: (_) => const _MobileScannerPage()),
+      );
+      if (resultado != null && resultado.isNotEmpty) {
+        controller.controladorCodigoBarra.text = resultado;
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'No se pudo escanear: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
   @override
   void dispose() {
+    // limpiar any autocomplete listener
+    if (_unidadAutocompleteController != null &&
+        _unidadAutocompleteListener != null) {
+      _unidadAutocompleteController!.removeListener(
+        _unidadAutocompleteListener!,
+      );
+    }
+    _unidadAutocompleteController = null;
+    _unidadAutocompleteListener = null;
+
     controller.limpiarFormulario();
     super.dispose();
   }
@@ -178,7 +273,8 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                 const SizedBox(height: 12),
                 Obx(
                   () => DropdownButtonFormField<String>(
-                    initialValue: controller.idCategoriaSeleccionada.value.isEmpty
+                    initialValue:
+                        controller.idCategoriaSeleccionada.value.isEmpty
                         ? null
                         : controller.idCategoriaSeleccionada.value,
                     decoration: inputDecoration(labelText: 'Categoría'),
@@ -206,6 +302,16 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                   controller: controller.controladorNombre,
                   style: fieldTextStyle,
                   decoration: inputDecoration(labelText: 'Nombre del producto'),
+                  onChanged: (valor) {
+                    // Si es creación y aún no hay código, asignar uno incremental cuando empiece a escribir nombre
+                    if (!_esEdicion &&
+                        controller.controladorCodigoProducto.text
+                            .trim()
+                            .isEmpty &&
+                        valor.trim().isNotEmpty) {
+                      controller.asignarCodigoProductoIncremental();
+                    }
+                  },
                   validator: controller.validarCampoObligatorio,
                 ),
                 const SizedBox(height: 12),
@@ -217,19 +323,109 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                   validator: controller.validarCampoObligatorio,
                 ),
                 const SizedBox(height: 12),
+                Obx(() {
+                  final archivoLocal = controller.imagenSeleccionada.value;
+                  final urlExistente = controller.fotoProductoUrl.value;
+                  final tieneFoto =
+                      archivoLocal != null || urlExistente.isNotEmpty;
+
+                  Widget contenidoFoto;
+                  if (archivoLocal != null) {
+                    contenidoFoto = Image.file(archivoLocal, fit: BoxFit.cover);
+                  } else if (urlExistente.isNotEmpty) {
+                    contenidoFoto = Image.network(
+                      urlExistente,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.broken_image_outlined,
+                        color: Colors.grey,
+                      ),
+                    );
+                  } else {
+                    contenidoFoto = const Icon(
+                      Icons.add_a_photo_outlined,
+                      color: Colors.grey,
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: 72,
+                          height: 72,
+                          color: fieldFillColor,
+                          alignment: Alignment.center,
+                          child: contenidoFoto,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Foto del producto (opcional)',
+                              style: fieldTextStyle,
+                            ),
+                            const SizedBox(height: 8),
+                            OutlinedButton.icon(
+                              onPressed: controller.subiendoImagen.value
+                                  ? null
+                                  : _mostrarSelectorFoto,
+                              icon: const Icon(Icons.camera_alt_outlined),
+                              label: Text(
+                                tieneFoto ? 'Cambiar foto' : 'Agregar foto',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: controller.controladorCodigoProducto,
                   style: fieldTextStyle,
-                  decoration: inputDecoration(labelText: 'Código de producto'),
+                  readOnly: true,
+                  decoration: inputDecoration(labelText: 'Código de producto')
+                      .copyWith(
+                        helperText: 'Se asigna automáticamente (5 dígitos)',
+                      ),
                 ),
                 const SizedBox(height: 12),
 
                 TextFormField(
                   controller: controller.controladorCodigoBarra,
                   style: fieldTextStyle,
-                  decoration: inputDecoration(
-                    labelText: 'Código de barra (opcional)',
-                  ),
+                  decoration:
+                      inputDecoration(
+                        labelText: 'Código de barra (opcional)',
+                      ).copyWith(
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.auto_awesome,
+                                color: Colors.indigo,
+                              ),
+                              tooltip: 'Generar EAN-13',
+                              onPressed: _generarCodigo,
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.qr_code_scanner,
+                                color: Colors.indigo,
+                              ),
+                              tooltip: 'Escanear código',
+                              onPressed: _escanearCodigo,
+                            ),
+                          ],
+                        ),
+                      ),
                 ),
               ]),
               const SizedBox(height: 16),
@@ -238,13 +434,95 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: TextFormField(
-                        controller: controller.controladorUnidadMedida,
-                        style: fieldTextStyle,
-                        decoration: inputDecoration(
-                          labelText: 'Unidad de medida',
-                        ),
-                        validator: controller.validarCampoObligatorio,
+                      child: Builder(
+                        builder: (context) {
+                          final commonUnits = <String>[
+                            'unidad',
+                            'pieza',
+                            'kg',
+                            'g',
+                            'l',
+                            'ml',
+                            'm',
+                            'cm',
+                            'pack',
+                            'caja',
+                            'par',
+                            'litro',
+                            'mililitro',
+                          ];
+
+                          return FormField<String>(
+                            initialValue:
+                                controller.controladorUnidadMedida.text,
+                            validator: (_) =>
+                                controller.validarCampoObligatorio(
+                                  controller.controladorUnidadMedida.text,
+                                ),
+                            builder: (state) {
+                              return Autocomplete<String>(
+                                optionsBuilder:
+                                    (TextEditingValue textEditingValue) {
+                                      final text = textEditingValue.text
+                                          .toLowerCase();
+                                      if (text.isEmpty) return commonUnits;
+                                      return commonUnits.where(
+                                        (u) => u.toLowerCase().contains(text),
+                                      );
+                                    },
+                                onSelected: (selection) {
+                                  controller.controladorUnidadMedida.text =
+                                      selection;
+                                  state.didChange(selection);
+                                },
+                                fieldViewBuilder:
+                                    (
+                                      context,
+                                      textEditingController,
+                                      focusNode,
+                                      onFieldSubmitted,
+                                    ) {
+                                      // Ensure controller and internal controller stay in sync
+                                      textEditingController.text = controller
+                                          .controladorUnidadMedida
+                                          .text;
+                                      textEditingController.selection =
+                                          TextSelection.fromPosition(
+                                            TextPosition(
+                                              offset: textEditingController
+                                                  .text
+                                                  .length,
+                                            ),
+                                          );
+                                      textEditingController.addListener(() {
+                                        controller
+                                                .controladorUnidadMedida
+                                                .text =
+                                            textEditingController.text;
+                                        state.didChange(
+                                          textEditingController.text,
+                                        );
+                                      });
+
+                                      return TextFormField(
+                                        controller: textEditingController,
+                                        focusNode: focusNode,
+                                        style: fieldTextStyle,
+                                        decoration: inputDecoration(
+                                          labelText: 'Unidad de medida',
+                                        ),
+                                        validator: (_) =>
+                                            controller.validarCampoObligatorio(
+                                              controller
+                                                  .controladorUnidadMedida
+                                                  .text,
+                                            ),
+                                      );
+                                    },
+                              );
+                            },
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -362,6 +640,43 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _MobileScannerPage extends StatefulWidget {
+  const _MobileScannerPage({Key? key}) : super(key: key);
+
+  @override
+  State<_MobileScannerPage> createState() => _MobileScannerPageState();
+}
+
+class _MobileScannerPageState extends State<_MobileScannerPage> {
+  final MobileScannerController _cameraController = MobileScannerController();
+  bool _detected = false;
+
+  @override
+  void dispose() {
+    _cameraController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Escanear código')),
+      body: MobileScanner(
+        controller: _cameraController,
+        onDetect: (capture) {
+          if (_detected) return;
+          if (capture.barcodes.isEmpty) return;
+          final barcode = capture.barcodes.first;
+          final String? code = barcode.rawValue ?? barcode.displayValue;
+          if (code == null || code.isEmpty) return;
+          _detected = true;
+          Navigator.of(context).pop(code);
+        },
       ),
     );
   }
