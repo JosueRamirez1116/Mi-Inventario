@@ -16,6 +16,8 @@ class AgregarProductosScreen extends StatefulWidget {
 
 class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
   late final ProductosController controller;
+  TextEditingController? _unidadAutocompleteController;
+  VoidCallback? _unidadAutocompleteListener;
 
   bool get _esEdicion => widget.producto != null;
 
@@ -72,6 +74,16 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
 
   @override
   void dispose() {
+    // limpiar any autocomplete listener
+    if (_unidadAutocompleteController != null &&
+        _unidadAutocompleteListener != null) {
+      _unidadAutocompleteController!.removeListener(
+        _unidadAutocompleteListener!,
+      );
+    }
+    _unidadAutocompleteController = null;
+    _unidadAutocompleteListener = null;
+
     controller.limpiarFormulario();
     super.dispose();
   }
@@ -312,13 +324,95 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: TextFormField(
-                        controller: controller.controladorUnidadMedida,
-                        style: fieldTextStyle,
-                        decoration: inputDecoration(
-                          labelText: 'Unidad de medida',
-                        ),
-                        validator: controller.validarCampoObligatorio,
+                      child: Builder(
+                        builder: (context) {
+                          final commonUnits = <String>[
+                            'unidad',
+                            'pieza',
+                            'kg',
+                            'g',
+                            'l',
+                            'ml',
+                            'm',
+                            'cm',
+                            'pack',
+                            'caja',
+                            'par',
+                            'litro',
+                            'mililitro',
+                          ];
+
+                          return FormField<String>(
+                            initialValue:
+                                controller.controladorUnidadMedida.text,
+                            validator: (_) =>
+                                controller.validarCampoObligatorio(
+                                  controller.controladorUnidadMedida.text,
+                                ),
+                            builder: (state) {
+                              return Autocomplete<String>(
+                                optionsBuilder:
+                                    (TextEditingValue textEditingValue) {
+                                      final text = textEditingValue.text
+                                          .toLowerCase();
+                                      if (text.isEmpty) return commonUnits;
+                                      return commonUnits.where(
+                                        (u) => u.toLowerCase().contains(text),
+                                      );
+                                    },
+                                onSelected: (selection) {
+                                  controller.controladorUnidadMedida.text =
+                                      selection;
+                                  state.didChange(selection);
+                                },
+                                fieldViewBuilder:
+                                    (
+                                      context,
+                                      textEditingController,
+                                      focusNode,
+                                      onFieldSubmitted,
+                                    ) {
+                                      // Ensure controller and internal controller stay in sync
+                                      textEditingController.text = controller
+                                          .controladorUnidadMedida
+                                          .text;
+                                      textEditingController.selection =
+                                          TextSelection.fromPosition(
+                                            TextPosition(
+                                              offset: textEditingController
+                                                  .text
+                                                  .length,
+                                            ),
+                                          );
+                                      textEditingController.addListener(() {
+                                        controller
+                                                .controladorUnidadMedida
+                                                .text =
+                                            textEditingController.text;
+                                        state.didChange(
+                                          textEditingController.text,
+                                        );
+                                      });
+
+                                      return TextFormField(
+                                        controller: textEditingController,
+                                        focusNode: focusNode,
+                                        style: fieldTextStyle,
+                                        decoration: inputDecoration(
+                                          labelText: 'Unidad de medida',
+                                        ),
+                                        validator: (_) =>
+                                            controller.validarCampoObligatorio(
+                                              controller
+                                                  .controladorUnidadMedida
+                                                  .text,
+                                            ),
+                                      );
+                                    },
+                              );
+                            },
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),
