@@ -98,6 +98,23 @@ class _InventarioScreenState extends State<InventarioScreen> {
         .snapshots();
   }
 
+  // NOTA: asume que existe (o existirá) una colección 'bodegas' en Firestore
+  // con al menos los campos 'nombre', 'usuarioId' y 'estado', igual que
+  // categorias/negocios. Si el nombre de la colección o de los campos es
+  // distinto en tu proyecto, ajusta aquí.
+  Stream<QuerySnapshot<Map<String, dynamic>>> get _streamBodegas {
+    final uid = _uidActual;
+    if (uid == null || uid.isEmpty) {
+      return const Stream.empty();
+    }
+
+    return FirebaseFirestore.instance
+        .collection('bodegas')
+        .where('usuarioId', isEqualTo: uid)
+        .where('estado', isEqualTo: 1)
+        .snapshots();
+  }
+
   Future<void> _abrirFormularioRegistro() async {
     await Navigator.push<bool>(
       context,
@@ -161,116 +178,247 @@ class _InventarioScreenState extends State<InventarioScreen> {
     }
   }
 
-  Future<void> _mostrarDialogoMovimiento(ProductosModel producto) async {
-    String tipoMovimiento = 'Entrada';
+  /// Formulario de "Registrar Entrada" / "Registrar Salida" estilo mockup,
+  /// con Cantidad, Bodega, Proveedor/Cliente (opcional), Fecha y Observaciones.
+  Future<void> _abrirFormularioMovimiento(
+    ProductosModel producto,
+    String tipo,
+  ) async {
+    final esEntrada = tipo == 'Entrada';
+    final colorAccion = esEntrada ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
+
     final cantidadController = TextEditingController();
+    final terceroController = TextEditingController(); // Proveedor o Cliente
+    final observacionesController = TextEditingController();
+    String? bodegaId;
+    DateTime fecha = DateTime.now();
     bool guardando = false;
 
-    await showDialog<void>(
+    await showModalBottomSheet<void>(
       context: context,
-      builder: (dialogContext) {
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
         return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Registrar movimiento'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<String>(
-                    key: ValueKey('mov-$tipoMovimiento'),
-                    initialValue: tipoMovimiento,
-                    decoration: const InputDecoration(labelText: 'Tipo'),
-                    items: const [
-                      DropdownMenuItem(value: 'Entrada', child: Text('Entrada')),
-                      DropdownMenuItem(value: 'Salida', child: Text('Salida')),
-                    ],
-                    onChanged: guardando
-                        ? null
-                        : (value) {
-                            if (value == null) {
-                              return;
-                            }
-                            setDialogState(() => tipoMovimiento = value);
-                          },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: cantidadController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: 'Cantidad',
-                      hintText: 'Ingresa una cantidad mayor a 0',
-                    ),
-                  ),
-                ],
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
               ),
-              actions: [
-                TextButton(
-                  onPressed: guardando
-                      ? null
-                      : () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancelar'),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                 ),
-                FilledButton.icon(
-                  onPressed: guardando
-                      ? null
-                      : () async {
-                          final cantidad = double.tryParse(
-                            cantidadController.text.trim(),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        esEntrada ? 'Registrar Entrada' : 'Registrar Salida',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: colorAccion,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        producto.nombreProducto,
+                        style: const TextStyle(color: Colors.black54),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: cantidadController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Cantidad',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.numbers),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                        stream: _streamBodegas,
+                        builder: (context, snapshot) {
+                          final bodegasDocs = snapshot.data?.docs ?? [];
+                          return DropdownButtonFormField<String>(
+                            key: ValueKey('bodega-$bodegaId'),
+                            initialValue: bodegaId,
+                            decoration: const InputDecoration(
+                              labelText: 'Seleccione una bodega',
+                              border: OutlineInputBorder(),
+                            ),
+                            isExpanded: true,
+                            items: bodegasDocs.map((doc) {
+                              final nombre =
+                                  (doc.data()['nombre'] ?? '').toString();
+                              return DropdownMenuItem(
+                                value: doc.id,
+                                child: Text(
+                                  nombre.isEmpty ? 'Sin nombre' : nombre,
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setSheetState(() => bodegaId = value);
+                            },
                           );
-                          if (cantidad == null || cantidad <= 0) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Ingresa una cantidad numérica mayor a 0',
-                                ),
-                              ),
-                            );
-                            return;
-                          }
-
-                          setDialogState(() => guardando = true);
-                          try {
-                            await _controller.registrarMovimiento(
-                              producto: producto,
-                              tipoMovimiento: tipoMovimiento,
-                              cantidad: cantidad,
-                            );
-
-                            if (!dialogContext.mounted) {
-                              return;
-                            }
-                            Navigator.of(dialogContext).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Movimiento $tipoMovimiento registrado',
-                                ),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          } catch (error) {
-                            setDialogState(() => guardando = false);
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              SnackBar(content: Text('No se pudo guardar: $error')),
-                            );
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: terceroController,
+                        decoration: InputDecoration(
+                          labelText: esEntrada
+                              ? 'Proveedor (opcional)'
+                              : 'Cliente (opcional)',
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      InkWell(
+                        onTap: () async {
+                          final seleccionada = await showDatePicker(
+                            context: context,
+                            initialDate: fecha,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                          );
+                          if (seleccionada != null) {
+                            setSheetState(() => fecha = seleccionada);
                           }
                         },
-                  icon: const Icon(Icons.save),
-                  label: guardando
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Fecha',
+                            border: OutlineInputBorder(),
+                            suffixIcon: Icon(Icons.calendar_today, size: 18),
                           ),
-                        )
-                      : const Text('Guardar'),
+                          child: Text(
+                            '${fecha.day.toString().padLeft(2, '0')}/'
+                            '${fecha.month.toString().padLeft(2, '0')}/'
+                            '${fecha.year}',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: observacionesController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: 'Observaciones',
+                          border: OutlineInputBorder(),
+                          alignLabelWithHint: true,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: guardando
+                                  ? null
+                                  : () => Navigator.of(sheetContext).pop(),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red,
+                                side: const BorderSide(color: Colors.red),
+                              ),
+                              child: const Text('Cancelar'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: guardando
+                                  ? null
+                                  : () async {
+                                      final cantidad = double.tryParse(
+                                        cantidadController.text.trim(),
+                                      );
+                                      if (cantidad == null || cantidad <= 0) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Ingresa una cantidad numérica mayor a 0',
+                                            ),
+                                          ),
+                                        );
+                                        return;
+                                      }
+
+                                      setSheetState(() => guardando = true);
+                                      try {
+                                        await _controller.registrarMovimiento(
+                                          producto: producto,
+                                          tipoMovimiento: tipo,
+                                          cantidad: cantidad,
+                                          bodegaId: bodegaId,
+                                          tercero: terceroController.text.trim(),
+                                          fecha: fecha,
+                                          observaciones:
+                                              observacionesController.text.trim(),
+                                        );
+
+                                        if (!sheetContext.mounted) {
+                                          return;
+                                        }
+                                        Navigator.of(sheetContext).pop();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              esEntrada
+                                                  ? 'Entrada registrada'
+                                                  : 'Salida registrada',
+                                            ),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                      } catch (error) {
+                                        setSheetState(() => guardando = false);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('No se pudo guardar: $error'),
+                                          ),
+                                        );
+                                      }
+                                    },
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.green,
+                              ),
+                              child: guardando
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text('Registrar'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             );
           },
         );
@@ -278,6 +426,8 @@ class _InventarioScreenState extends State<InventarioScreen> {
     );
 
     cantidadController.dispose();
+    terceroController.dispose();
+    observacionesController.dispose();
   }
 
   Future<void> _mostrarDetalleProducto(
@@ -288,58 +438,131 @@ class _InventarioScreenState extends State<InventarioScreen> {
     final nombreCategoria = categoriasPorId[producto.idCategoria] ?? 'Sin categoría';
     final nombreNegocio = negociosPorId[producto.idNegocio] ?? 'Sin negocio';
 
-    await showDialog<void>(
+    await showModalBottomSheet<void>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(producto.nombreProducto),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _info('Código', producto.codigoProducto),
-                _info('Categoría', nombreCategoria),
-                _info('Negocio', nombreNegocio),
-                _info('Stock actual', producto.stockActual.toStringAsFixed(2)),
-                _info('Unidad', producto.unidadMedida),
-                _info('Precio compra', producto.precioCompra.toStringAsFixed(2)),
-                _info('Precio venta', producto.precioVenta.toStringAsFixed(2)),
-                _info('Descripción', producto.descripcion),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cerrar'),
-            ),
-            TextButton.icon(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                _abrirFormularioEdicion(producto);
-              },
-              icon: const Icon(Icons.edit),
-              label: const Text('Modificar'),
-            ),
-            TextButton.icon(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                _mostrarDialogoMovimiento(producto);
-              },
-              icon: const Icon(Icons.swap_horiz),
-              label: const Text('Entrada / Salida'),
-            ),
-            TextButton.icon(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                _confirmarEliminacion(producto);
-              },
-              icon: const Icon(Icons.delete),
-              label: const Text('Eliminar'),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-            ),
-          ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.35,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10, bottom: 4),
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                    decoration: const BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        _buildFotoProducto(producto.fotoProducto),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            producto.nombreProducto,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: _colorPrincipal,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _info('Código', producto.codigoProducto),
+                          _info('Categoría', nombreCategoria),
+                          _info('Negocio', nombreNegocio),
+                          _info('Stock actual', producto.stockActual.toStringAsFixed(2)),
+                          _info('Unidad', producto.unidadMedida),
+                          _info('Precio compra', producto.precioCompra.toStringAsFixed(2)),
+                          _info('Precio venta', producto.precioVenta.toStringAsFixed(2)),
+                          _info('Descripción', producto.descripcion),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: _colorPrincipal,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: () {
+                              Navigator.of(sheetContext).pop();
+                              _abrirFormularioEdicion(producto);
+                            },
+                            icon: const Icon(Icons.edit, size: 18),
+                            label: const Text('Modificar'),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextButton.icon(
+                                onPressed: () => Navigator.of(sheetContext).pop(),
+                                icon: const Icon(Icons.close, size: 18),
+                                label: const Text('Cerrar'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.black54,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: TextButton.icon(
+                                onPressed: () {
+                                  Navigator.of(sheetContext).pop();
+                                  _confirmarEliminacion(producto);
+                                },
+                                icon: const Icon(Icons.delete_outline, size: 18),
+                                label: const Text('Eliminar'),
+                                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -660,6 +883,36 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                                 ],
                                               ),
                                             ),
+                                            _AccionProducto(
+                                              icono: Icons.edit_outlined,
+                                              color: _colorPrincipal,
+                                              etiqueta: 'Modificar',
+                                              relleno: false,
+                                              onTap: () =>
+                                                  _abrirFormularioEdicion(producto),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            _AccionProducto(
+                                              icono: Icons.add,
+                                              color: const Color(0xFF2E7D32),
+                                              etiqueta: 'Ingreso',
+                                              relleno: true,
+                                              onTap: () => _abrirFormularioMovimiento(
+                                                producto,
+                                                'Entrada',
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            _AccionProducto(
+                                              icono: Icons.remove,
+                                              color: const Color(0xFFC62828),
+                                              etiqueta: 'Salida',
+                                              relleno: true,
+                                              onTap: () => _abrirFormularioMovimiento(
+                                                producto,
+                                                'Salida',
+                                              ),
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -682,6 +935,57 @@ class _InventarioScreenState extends State<InventarioScreen> {
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
+    );
+  }
+}
+
+/// Botón circular con etiqueta debajo, usado para las acciones rápidas
+/// (Modificar / Ingreso / Salida) de cada tarjeta de producto.
+class _AccionProducto extends StatelessWidget {
+  const _AccionProducto({
+    required this.icono,
+    required this.color,
+    required this.etiqueta,
+    required this.onTap,
+    this.relleno = true,
+  });
+
+  final IconData icono;
+  final Color color;
+  final String etiqueta;
+  final bool relleno;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: relleno ? color : Colors.transparent,
+              border: relleno ? null : Border.all(color: color, width: 1.4),
+            ),
+            child: Icon(
+              icono,
+              size: 18,
+              color: relleno ? Colors.white : color,
+            ),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          etiqueta,
+          style: TextStyle(fontSize: 10, color: color),
+        ),
+      ],
     );
   }
 }

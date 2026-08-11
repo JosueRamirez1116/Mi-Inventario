@@ -256,6 +256,10 @@ class ProductosController extends GetxController {
     required ProductosModel producto,
     required String tipoMovimiento,
     required double cantidad,
+    String? bodegaId,
+    String? tercero,
+    DateTime? fecha,
+    String? observaciones,
   }) async {
     if (producto.id == null || producto.id!.isEmpty) {
       throw Exception('El producto no tiene un identificador válido');
@@ -301,6 +305,10 @@ class ProductosController extends GetxController {
         'stockAnterior': stockActual,
         'stockNuevo': nuevoStock,
         'estado': 1,
+        'bodegaId': bodegaId ?? '',
+        'tercero': tercero ?? '',
+        'observaciones': observaciones ?? '',
+        'fecha': fecha != null ? Timestamp.fromDate(fecha) : FieldValue.serverTimestamp(),
         'fechaMovimiento': FieldValue.serverTimestamp(),
       });
     });
