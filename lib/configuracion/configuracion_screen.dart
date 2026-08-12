@@ -12,8 +12,6 @@ class ConfiguracionScreen extends StatefulWidget {
 }
 
 class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
-  static const Color _colorPrincipal = Color.fromARGB(255, 28, 83, 170);
-
   final AuthService _authService = AuthService();
 
   bool _modoOscuro = Get.isDarkMode;
@@ -37,37 +35,42 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
     switch (codigo) {
       case 'requires-recent-login':
         return 'Por seguridad debes confirmar tu contraseña.';
+
       case 'wrong-password':
       case 'invalid-credential':
         return 'La contraseña ingresada es incorrecta.';
+
       case 'network-request-failed':
         return 'Sin conexión a internet. Verifica tu red.';
+
       case 'permission-denied':
         return 'No tienes permisos para realizar esta acción.';
+
       case 'missing-uid':
         return 'No hay una sesión activa.';
+
       default:
         return 'No se pudo eliminar la cuenta. Intenta nuevamente.';
     }
   }
 
   Future<void> _confirmarEliminarCuenta() async {
+    final colores = Theme.of(context).colorScheme;
+
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.red),
-              SizedBox(width: 10),
-              Text('Eliminar cuenta'),
+              Icon(Icons.warning_amber_rounded, color: colores.error),
+              const SizedBox(width: 10),
+              const Text('Eliminar cuenta'),
             ],
           ),
           content: const Text(
-            'Al continuar, tu usuario será marcado como eliminado '
-            'en la base de datos con estado 0 y tu cuenta será '
-            'eliminada de Firebase Authentication.\n\n'
-            'Tus datos permanecerán registrados en Firestore.\n\n'
+            'Al continuar, tu cuenta será eliminada y ya no podrás acceder a ella.\n\n'
+            'Esta acción no se puede deshacer.\n\n'
             '¿Deseas continuar?',
           ),
           actions: [
@@ -79,8 +82,8 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
             ),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
+                backgroundColor: colores.error,
+                foregroundColor: colores.onError,
               ),
               onPressed: () {
                 Navigator.of(dialogContext).pop(true);
@@ -159,6 +162,8 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            final colores = Theme.of(context).colorScheme;
+
             return AlertDialog(
               title: const Text('Confirmar contraseña'),
               content: Column(
@@ -177,7 +182,6 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Contraseña actual',
                       prefixIcon: Icon(Icons.lock_outline),
-                      border: OutlineInputBorder(),
                     ),
                   ),
                 ],
@@ -192,9 +196,6 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                   child: const Text('Cancelar'),
                 ),
                 FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _colorPrincipal,
-                  ),
                   onPressed: procesando
                       ? null
                       : () async {
@@ -206,6 +207,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                                 content: Text('Ingresa tu contraseña.'),
                               ),
                             );
+
                             return;
                           }
 
@@ -235,12 +237,12 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                           }
                         },
                   child: procesando
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: colores.onPrimary,
                           ),
                         )
                       : const Text('Continuar'),
@@ -261,21 +263,11 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final esOscuro = Theme.of(context).brightness == Brightness.dark;
-
-    final colorTarjeta = esOscuro ? const Color(0xFF242424) : Colors.white;
-
-    final colorTexto = esOscuro ? Colors.white : const Color(0xFF303030);
-
-    final colorSecundario = esOscuro ? Colors.white70 : Colors.black54;
+    final tema = Theme.of(context);
+    final colores = tema.colorScheme;
 
     return Scaffold(
-      backgroundColor: esOscuro
-          ? const Color(0xFF121212)
-          : const Color.fromARGB(255, 248, 244, 250),
       appBar: AppBar(
-        backgroundColor: _colorPrincipal,
-        foregroundColor: Colors.white,
         title: const Text(
           'Configuración',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -287,81 +279,60 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: colorTarjeta,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 55,
-                      height: 55,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8EAF6),
-                        borderRadius: BorderRadius.circular(15),
+              Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 55,
+                        height: 55,
+                        decoration: BoxDecoration(
+                          color: colores.primaryContainer,
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: Icon(
+                          Icons.settings,
+                          color: colores.primary,
+                          size: 32,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.settings,
-                        color: _colorPrincipal,
-                        size: 32,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Mi configuración',
-                            style: TextStyle(
-                              fontSize: 19,
-                              fontWeight: FontWeight.bold,
-                              color: colorTexto,
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Mi configuración',
+                              style: tema.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colores.onSurface,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Administra tu cuenta y preferencias',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: colorSecundario,
+                            const SizedBox(height: 4),
+                            Text(
+                              'Administra tu cuenta y preferencias',
+                              style: tema.textTheme.bodyMedium?.copyWith(
+                                color: colores.onSurfaceVariant,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
 
               const SizedBox(height: 26),
 
-              Text(
-                'CUENTA',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: colorSecundario,
-                  letterSpacing: 0.6,
-                ),
-              ),
+              _tituloSeccion(context, 'CUENTA'),
 
               const SizedBox(height: 10),
 
               _crearOpcion(
-                colorTarjeta: colorTarjeta,
-                colorTexto: colorTexto,
-                colorSecundario: colorSecundario,
+                context: context,
                 icono: Icons.person_outline,
                 titulo: 'Perfil de usuario',
                 descripcion: 'Consulta y edita tu información personal',
@@ -370,134 +341,100 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
 
               const SizedBox(height: 24),
 
-              Text(
-                'APARIENCIA',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: colorSecundario,
-                  letterSpacing: 0.6,
-                ),
-              ),
+              _tituloSeccion(context, 'APARIENCIA'),
 
               const SizedBox(height: 10),
 
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                decoration: BoxDecoration(
-                  color: colorTarjeta,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8EAF6),
-                        borderRadius: BorderRadius.circular(13),
+              Card(
+                margin: EdgeInsets.zero,
+                clipBehavior: Clip.antiAlias,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: colores.primaryContainer,
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: Icon(
+                          _modoOscuro ? Icons.dark_mode : Icons.light_mode,
+                          color: colores.primary,
+                        ),
                       ),
-                      child: Icon(
-                        _modoOscuro ? Icons.dark_mode : Icons.light_mode,
-                        color: _colorPrincipal,
-                      ),
-                    ),
 
-                    const SizedBox(width: 14),
+                      const SizedBox(width: 14),
 
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Modo oscuro',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: colorTexto,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Modo oscuro',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: colores.onSurface,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            _modoOscuro
-                                ? 'Modo oscuro activado'
-                                : 'Modo claro activado',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: colorSecundario,
+                            const SizedBox(height: 3),
+                            Text(
+                              _modoOscuro
+                                  ? 'Nocturno Boutique activado'
+                                  : 'Índigo Corporativo activado',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: colores.onSurfaceVariant,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
 
-                    Switch(
-                      value: _modoOscuro,
-                      activeThumbColor: _colorPrincipal,
-                      onChanged: _cambiarModoOscuro,
-                    ),
-                  ],
+                      Switch(value: _modoOscuro, onChanged: _cambiarModoOscuro),
+                    ],
+                  ),
                 ),
               ),
 
               const SizedBox(height: 24),
 
-              Text(
-                'SEGURIDAD',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: colorSecundario,
-                  letterSpacing: 0.6,
-                ),
-              ),
+              _tituloSeccion(context, 'SEGURIDAD'),
 
               const SizedBox(height: 10),
 
-              Material(
-                color: colorTarjeta,
-                borderRadius: BorderRadius.circular(16),
+              Card(
+                margin: EdgeInsets.zero,
+                clipBehavior: Clip.antiAlias,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
                   onTap: _eliminando ? null : _confirmarEliminarCuenta,
-                  child: Container(
+                  child: Padding(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.red.withValues(alpha: 0.25),
-                      ),
-                    ),
                     child: Row(
                       children: [
                         Container(
                           width: 46,
                           height: 46,
                           decoration: BoxDecoration(
-                            color: Colors.red.shade50,
+                            color: colores.errorContainer,
                             borderRadius: BorderRadius.circular(13),
                           ),
                           child: _eliminando
-                              ? const Padding(
-                                  padding: EdgeInsets.all(12),
+                              ? Padding(
+                                  padding: const EdgeInsets.all(12),
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Colors.red,
+                                    color: colores.error,
                                   ),
                                 )
-                              : const Icon(
+                              : Icon(
                                   Icons.person_off_outlined,
-                                  color: Colors.red,
+                                  color: colores.error,
                                 ),
                         ),
 
@@ -512,7 +449,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.red,
+                                  color: colores.error,
                                 ),
                               ),
                               const SizedBox(height: 3),
@@ -520,7 +457,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                                 'Desactivar la cuenta y eliminar el acceso',
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: colorSecundario,
+                                  color: colores.onSurfaceVariant,
                                 ),
                               ),
                             ],
@@ -528,7 +465,10 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                         ),
 
                         if (!_eliminando)
-                          const Icon(Icons.chevron_right, color: Colors.grey),
+                          Icon(
+                            Icons.chevron_right,
+                            color: colores.onSurfaceVariant,
+                          ),
                       ],
                     ),
                   ),
@@ -541,43 +481,46 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
     );
   }
 
+  Widget _tituloSeccion(BuildContext context, String titulo) {
+    final colores = Theme.of(context).colorScheme;
+
+    return Text(
+      titulo,
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.bold,
+        color: colores.onSurfaceVariant,
+        letterSpacing: 0.6,
+      ),
+    );
+  }
+
   Widget _crearOpcion({
-    required Color colorTarjeta,
-    required Color colorTexto,
-    required Color colorSecundario,
+    required BuildContext context,
     required IconData icono,
     required String titulo,
     required String descripcion,
     required VoidCallback onTap,
   }) {
-    return Material(
-      color: colorTarjeta,
-      borderRadius: BorderRadius.circular(16),
+    final colores = Theme.of(context).colorScheme;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
-        child: Container(
+        child: Padding(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
           child: Row(
             children: [
               Container(
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8EAF6),
+                  color: colores.primaryContainer,
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: Icon(icono, color: _colorPrincipal),
+                child: Icon(icono, color: colores.primary),
               ),
 
               const SizedBox(width: 14),
@@ -591,19 +534,22 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: colorTexto,
+                        color: colores.onSurface,
                       ),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       descripcion,
-                      style: TextStyle(fontSize: 13, color: colorSecundario),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: colores.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
               ),
 
-              const Icon(Icons.chevron_right, color: Colors.grey),
+              Icon(Icons.chevron_right, color: colores.onSurfaceVariant),
             ],
           ),
         ),

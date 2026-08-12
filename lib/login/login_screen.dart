@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mi_inventario/auth/services/auth_service.dart';
 import 'package:mi_inventario/registro/registro_screen.dart';
+import 'package:mi_inventario/theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,23 +13,27 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
+
   final _emailController = TextEditingController();
+
   final _passwordController = TextEditingController();
+
   final AuthService _authService = AuthService();
 
   bool _cargando = false;
   bool _ocultarPassword = true;
   String? _error;
 
-  // Colores base del tema (morado/índigo)
   static const Color _colorPrimario = Color(0xFF6C63FF);
+
   static const Color _colorPrimarioOscuro = Color(0xFF4A3FCF);
+
   static const Color _colorFondoClaro = Color(0xFFF3F1FF);
 
-  // Nota: al iniciar sesión con éxito no navegamos manualmente a Home.
-  // main.dart escucha authStateChanges y cambia de pantalla automáticamente.
   Future<void> _iniciarSesion() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
     setState(() {
       _cargando = true;
@@ -41,46 +46,60 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text.trim(),
       );
     } on FirebaseAuthException catch (e) {
-      setState(() => _error = _mensajeError(e.code));
+      setState(() {
+        _error = _mensajeError(e.code);
+      });
     } on FirebaseException catch (e) {
-      setState(() => _error = _mensajeError(e.code));
-    } catch (e) {
-      setState(() => _error = 'Ocurrió un error inesperado. Intenta de nuevo.');
+      setState(() {
+        _error = _mensajeError(e.code);
+      });
+    } catch (_) {
+      setState(() {
+        _error = 'Ocurrió un error inesperado. Intenta de nuevo.';
+      });
     } finally {
-      if (mounted) setState(() => _cargando = false);
+      if (mounted) {
+        setState(() {
+          _cargando = false;
+        });
+      }
     }
   }
 
-  /// Traduce los códigos de FirebaseAuthException a mensajes en español
-  /// que un usuario final pueda entender.
   String _mensajeError(String codigo) {
     switch (codigo) {
       case 'user-not-found':
       case 'wrong-password':
       case 'invalid-credential':
         return 'Correo o contraseña incorrectos.';
+
       case 'invalid-email':
         return 'El correo no tiene un formato válido.';
+
       case 'user-disabled':
         return 'Esta cuenta ha sido deshabilitada.';
+
       case 'too-many-requests':
         return 'Demasiados intentos. Intenta de nuevo en unos minutos.';
+
       case 'network-request-failed':
         return 'Sin conexión a internet. Verifica tu red.';
+
       case 'permission-denied':
         return 'No hay permisos para acceder a la base de datos.';
+
       default:
         return 'No se pudo iniciar sesión. Intenta de nuevo.';
     }
   }
 
-  /// Diálogo para pedir el correo y enviar el enlace de restablecimiento
-  /// de contraseña (propuesta actualizada, punto 4).
   Future<void> _mostrarDialogoRestablecer() async {
     final controladorCorreo = TextEditingController(
       text: _emailController.text.trim(),
     );
+
     final formKeyDialogo = GlobalKey<FormState>();
+
     bool enviando = false;
 
     await showDialog(
@@ -88,6 +107,12 @@ class _LoginScreenState extends State<LoginScreen> {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (dialogContext, setStateDialogo) {
+            final tema = Theme.of(dialogContext);
+
+            final colores = tema.colorScheme;
+
+            final esOscuro = tema.brightness == Brightness.dark;
+
             return AlertDialog(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -102,34 +127,62 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: controladorCorreo,
                   autofocus: true,
                   keyboardType: TextInputType.emailAddress,
+                  style: TextStyle(color: colores.onSurface),
                   decoration: InputDecoration(
                     labelText: 'Correo electrónico',
                     hintText: 'correo@ejemplo.com',
-                    prefixIcon: const Icon(Icons.email_outlined),
+                    prefixIcon: Icon(
+                      Icons.email_outlined,
+                      color: esOscuro ? AppTheme.oro : _colorPrimario,
+                    ),
                     filled: true,
-                    fillColor: _colorFondoClaro,
+                    fillColor: esOscuro
+                        ? AppTheme.superficieOscura
+                        : _colorFondoClaro,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide.none,
+                      borderSide: esOscuro
+                          ? const BorderSide(color: AppTheme.bordeOscuro)
+                          : BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: esOscuro
+                          ? const BorderSide(color: AppTheme.bordeOscuro)
+                          : BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(
+                        color: esOscuro ? AppTheme.oro : _colorPrimario,
+                        width: 2,
+                      ),
                     ),
                   ),
-                  validator: (valor) => (valor == null || !valor.contains('@'))
+                  validator: (valor) => valor == null || !valor.contains('@')
                       ? 'Ingresa un correo válido'
                       : null,
                 ),
               ),
-              actionsPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              actionsPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
               actions: [
                 TextButton(
                   onPressed: enviando
                       ? null
-                      : () => Navigator.of(dialogContext).pop(),
+                      : () {
+                          Navigator.of(dialogContext).pop();
+                        },
                   child: const Text('Cancelar'),
                 ),
                 FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: _colorPrimario,
+                    backgroundColor: esOscuro ? AppTheme.oro : _colorPrimario,
+                    foregroundColor: esOscuro
+                        ? AppTheme.fondoOscuro
+                        : Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -137,29 +190,54 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: enviando
                       ? null
                       : () async {
-                          if (!formKeyDialogo.currentState!.validate()) return;
-                          setStateDialogo(() => enviando = true);
+                          if (!formKeyDialogo.currentState!.validate()) {
+                            return;
+                          }
+
+                          setStateDialogo(() {
+                            enviando = true;
+                          });
+
                           try {
                             await _authService.restablecerContrasena(
                               controladorCorreo.text.trim(),
                             );
+
                             if (dialogContext.mounted) {
                               Navigator.of(dialogContext).pop();
                             }
+
                             if (mounted) {
+                              final temaActual = Theme.of(context);
+
+                              final oscuro =
+                                  temaActual.brightness == Brightness.dark;
+
+                              final colorSnack = oscuro
+                                  ? AppTheme.oro
+                                  : _colorPrimarioOscuro;
+
+                              final colorTexto = oscuro
+                                  ? AppTheme.fondoOscuro
+                                  : Colors.white;
+
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
+                                SnackBar(
                                   behavior: SnackBarBehavior.floating,
-                                  backgroundColor: _colorPrimarioOscuro,
+                                  backgroundColor: colorSnack,
                                   content: Text(
                                     'Te enviamos un enlace para restablecer '
                                     'tu contraseña. Revisa tu correo.',
+                                    style: TextStyle(color: colorTexto),
                                   ),
                                 ),
                               );
                             }
                           } on FirebaseAuthException catch (e) {
-                            setStateDialogo(() => enviando = false);
+                            setStateDialogo(() {
+                              enviando = false;
+                            });
+
                             if (dialogContext.mounted) {
                               ScaffoldMessenger.of(dialogContext).showSnackBar(
                                 SnackBar(content: Text(_mensajeError(e.code))),
@@ -168,12 +246,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           }
                         },
                   child: enviando
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 18,
                           width: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: esOscuro
+                                ? AppTheme.fondoOscuro
+                                : Colors.white,
                           ),
                         )
                       : const Text('Enviar enlace'),
@@ -184,12 +264,15 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       },
     );
+
+    controladorCorreo.dispose();
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+
     super.dispose();
   }
 
@@ -198,47 +281,95 @@ class _LoginScreenState extends State<LoginScreen> {
     required IconData icono,
     Widget? sufijo,
   }) {
+    final tema = Theme.of(context);
+    final colores = tema.colorScheme;
+
+    final esOscuro = tema.brightness == Brightness.dark;
+
+    final colorPrincipal = esOscuro ? AppTheme.oro : _colorPrimario;
+
+    final colorCampo = esOscuro ? AppTheme.superficieOscura : Colors.white;
+
+    final colorBorde = esOscuro ? AppTheme.bordeOscuro : Colors.grey.shade300;
+
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icono, color: _colorPrimario),
+      labelStyle: TextStyle(
+        color: esOscuro ? AppTheme.textoSecundarioOscuro : null,
+      ),
+      prefixIcon: Icon(icono, color: colorPrincipal),
       suffixIcon: sufijo,
       filled: true,
-      fillColor: Colors.white,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      fillColor: colorCampo,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderSide: BorderSide(color: colorBorde),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderSide: BorderSide(color: colorBorde),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: _colorPrimario, width: 2),
+        borderSide: BorderSide(color: colorPrincipal, width: 2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Colors.redAccent),
+        borderSide: BorderSide(color: colores.error),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: colores.error, width: 2),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final colores = tema.colorScheme;
+
+    final esOscuro = tema.brightness == Brightness.dark;
+
+    final coloresGradiente = esOscuro
+        ? const [
+            AppTheme.fondoOscuro,
+            AppTheme.superficieOscura,
+            AppTheme.fondoOscuro,
+          ]
+        : const [_colorPrimarioOscuro, _colorPrimario, _colorFondoClaro];
+
+    final colorLogo = esOscuro ? AppTheme.superficieOscura : Colors.white;
+
+    final colorIconoLogo = esOscuro ? AppTheme.oro : _colorPrimario;
+
+    final colorTitulo = esOscuro ? AppTheme.textoOscuro : Colors.white;
+
+    final colorSubtitulo = esOscuro
+        ? AppTheme.textoSecundarioOscuro
+        : Colors.white.withValues(alpha: 0.85);
+
+    final colorTarjeta = esOscuro ? AppTheme.superficieOscura : Colors.white;
+
+    final colorPrincipal = esOscuro ? AppTheme.oro : _colorPrimario;
+
+    final colorBotonTexto = esOscuro ? AppTheme.fondoOscuro : Colors.white;
+
+    final colorTextoInferior = esOscuro
+        ? AppTheme.textoSecundarioOscuro
+        : Colors.grey.shade800;
+
+    final colorRegistro = esOscuro ? AppTheme.oro : _colorPrimarioOscuro;
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              _colorPrimarioOscuro,
-              _colorPrimario,
-              _colorFondoClaro,
-            ],
-            stops: [0.0, 0.28, 0.55],
+            colors: coloresGradiente,
+            stops: const [0.0, 0.28, 0.55],
           ),
         ),
         child: SafeArea(
@@ -250,55 +381,65 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Ícono con fondo circular
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: colorLogo,
                         shape: BoxShape.circle,
+                        border: esOscuro
+                            ? Border.all(color: AppTheme.bordeOscuro)
+                            : null,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
+                            color: esOscuro
+                                ? AppTheme.oro.withValues(alpha: 0.12)
+                                : Colors.black.withValues(alpha: 0.15),
                             blurRadius: 16,
                             offset: const Offset(0, 6),
                           ),
                         ],
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.inventory_2_rounded,
                         size: 56,
-                        color: _colorPrimario,
+                        color: colorIconoLogo,
                       ),
                     ),
+
                     const SizedBox(height: 20),
-                    const Text(
+
+                    Text(
                       'MiInventario',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: colorTitulo,
                         letterSpacing: 0.5,
                       ),
                     ),
+
                     const SizedBox(height: 4),
+
                     Text(
                       'Gestiona tu inventario fácilmente',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white.withValues(alpha: 0.85),
-                      ),
+                      style: TextStyle(fontSize: 14, color: colorSubtitulo),
                     ),
+
                     const SizedBox(height: 32),
 
-                    // Tarjeta blanca con el formulario
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: colorTarjeta,
                         borderRadius: BorderRadius.circular(24),
+                        border: esOscuro
+                            ? Border.all(color: AppTheme.bordeOscuro)
+                            : null,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
+                            color: esOscuro
+                                ? AppTheme.oro.withValues(alpha: 0.08)
+                                : Colors.black.withValues(alpha: 0.08),
                             blurRadius: 24,
                             offset: const Offset(0, 10),
                           ),
@@ -309,19 +450,23 @@ class _LoginScreenState extends State<LoginScreen> {
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
+                            style: TextStyle(color: colores.onSurface),
                             decoration: _decoracionCampo(
                               label: 'Correo electrónico',
                               icono: Icons.email_outlined,
                             ),
                             validator: (valor) =>
-                                (valor == null || !valor.contains('@'))
+                                valor == null || !valor.contains('@')
                                 ? 'Ingresa un correo válido'
                                 : null,
                           ),
+
                           const SizedBox(height: 16),
+
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _ocultarPassword,
+                            style: TextStyle(color: colores.onSurface),
                             decoration: _decoracionCampo(
                               label: 'Contraseña',
                               icono: Icons.lock_outline,
@@ -330,53 +475,73 @@ class _LoginScreenState extends State<LoginScreen> {
                                   _ocultarPassword
                                       ? Icons.visibility_off_outlined
                                       : Icons.visibility_outlined,
-                                  color: Colors.grey.shade600,
+                                  color: esOscuro
+                                      ? AppTheme.textoSecundarioOscuro
+                                      : Colors.grey.shade600,
                                 ),
-                                onPressed: () => setState(
-                                  () => _ocultarPassword = !_ocultarPassword,
-                                ),
+                                onPressed: () {
+                                  setState(
+                                    () => _ocultarPassword = !_ocultarPassword,
+                                  );
+                                },
                               ),
                             ),
                             validator: (valor) =>
-                                (valor == null || valor.length < 6)
+                                valor == null || valor.length < 6
                                 ? 'Mínimo 6 caracteres'
                                 : null,
                           ),
+
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
                               style: TextButton.styleFrom(
-                                foregroundColor: _colorPrimario,
+                                foregroundColor: colorPrincipal,
                               ),
-                              onPressed:
-                                  _cargando ? null : _mostrarDialogoRestablecer,
+                              onPressed: _cargando
+                                  ? null
+                                  : _mostrarDialogoRestablecer,
                               child: const Text(
                                 '¿Olvidaste tu contraseña?',
                                 style: TextStyle(fontWeight: FontWeight.w600),
                               ),
                             ),
                           ),
+
                           if (_error != null)
                             Container(
                               width: double.infinity,
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 10),
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
                               decoration: BoxDecoration(
-                                color: Colors.red.shade50,
+                                color: esOscuro
+                                    ? colores.errorContainer
+                                    : Colors.red.shade50,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.red.shade100),
+                                border: Border.all(
+                                  color: esOscuro
+                                      ? colores.error.withValues(alpha: 0.35)
+                                      : Colors.red.shade100,
+                                ),
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.error_outline,
-                                      color: Colors.red.shade400, size: 18),
+                                  Icon(
+                                    Icons.error_outline,
+                                    color: colores.error,
+                                    size: 18,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       _error!,
                                       style: TextStyle(
-                                        color: Colors.red.shade700,
+                                        color: esOscuro
+                                            ? colores.onErrorContainer
+                                            : Colors.red.shade700,
                                         fontSize: 13,
                                       ),
                                     ),
@@ -384,27 +549,30 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ],
                               ),
                             ),
+
                           SizedBox(
                             width: double.infinity,
                             height: 52,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: _colorPrimario,
-                                foregroundColor: Colors.white,
-                                elevation: 4,
-                                shadowColor: _colorPrimario.withValues(alpha: 0.5),
+                                backgroundColor: colorPrincipal,
+                                foregroundColor: colorBotonTexto,
+                                elevation: esOscuro ? 1 : 4,
+                                shadowColor: colorPrincipal.withValues(
+                                  alpha: esOscuro ? 0.30 : 0.50,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                               ),
                               onPressed: _cargando ? null : _iniciarSesion,
                               child: _cargando
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       height: 22,
                                       width: 22,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2.4,
-                                        color: Colors.white,
+                                        color: colorBotonTexto,
                                       ),
                                     )
                                   : const Text(
@@ -419,22 +587,22 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 20),
 
-                    // Enlace de registro
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           '¿No tienes cuenta?',
                           style: TextStyle(
-                            color: Colors.grey.shade800,
+                            color: colorTextoInferior,
                             fontSize: 14,
                           ),
                         ),
                         TextButton(
                           style: TextButton.styleFrom(
-                            foregroundColor: _colorPrimarioOscuro,
+                            foregroundColor: colorRegistro,
                           ),
                           onPressed: () {
                             Navigator.of(context).push(

@@ -13,11 +13,11 @@ class MovimientosScreen extends StatefulWidget {
 }
 
 class _MovimientosScreenState extends State<MovimientosScreen> {
-  static const Color _colorPrincipal = Color.fromARGB(255, 28, 83, 170);
   late final MovimientosController _controller;
 
   DateTime? _fechaInicio;
   DateTime? _fechaFin;
+
   String _tipoMovimiento = 'Todos';
   String _filtroNegocioId = '';
   String _filtroCategoriaId = '';
@@ -26,6 +26,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> get _streamCategorias {
     final uid = _uidActual;
+
     if (uid == null || uid.isEmpty) {
       return const Stream.empty();
     }
@@ -39,6 +40,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> get _streamNegocios {
     final uid = _uidActual;
+
     if (uid == null || uid.isEmpty) {
       return const Stream.empty();
     }
@@ -53,6 +55,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
   @override
   void initState() {
     super.initState();
+
     if (Get.isRegistered<MovimientosController>()) {
       _controller = Get.find<MovimientosController>();
     } else {
@@ -67,10 +70,18 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
+
     if (seleccionada == null) {
       return;
     }
-    setState(() => _fechaInicio = DateTime(seleccionada.year, seleccionada.month, seleccionada.day));
+
+    setState(() {
+      _fechaInicio = DateTime(
+        seleccionada.year,
+        seleccionada.month,
+        seleccionada.day,
+      );
+    });
   }
 
   Future<void> _seleccionarFechaFin() async {
@@ -80,9 +91,11 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
+
     if (seleccionada == null) {
       return;
     }
+
     setState(() {
       _fechaFin = DateTime(
         seleccionada.year,
@@ -97,28 +110,37 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
 
   String _formatearFecha(DateTime fecha) {
     final dia = fecha.day.toString().padLeft(2, '0');
+
     final mes = fecha.month.toString().padLeft(2, '0');
+
     final anio = fecha.year.toString();
+
     final hora = fecha.hour.toString().padLeft(2, '0');
+
     final minuto = fecha.minute.toString().padLeft(2, '0');
+
     return '$dia/$mes/$anio $hora:$minuto';
   }
 
   List<MovimientoModel> _filtrarMovimientos(List<MovimientoModel> movimientos) {
     return movimientos.where((movimiento) {
-      if (_tipoMovimiento != 'Todos' && movimiento.tipoMovimiento != _tipoMovimiento) {
+      if (_tipoMovimiento != 'Todos' &&
+          movimiento.tipoMovimiento != _tipoMovimiento) {
         return false;
       }
 
-      if (_filtroNegocioId.isNotEmpty && movimiento.idNegocio != _filtroNegocioId) {
+      if (_filtroNegocioId.isNotEmpty &&
+          movimiento.idNegocio != _filtroNegocioId) {
         return false;
       }
 
-      if (_filtroCategoriaId.isNotEmpty && movimiento.idCategoria != _filtroCategoriaId) {
+      if (_filtroCategoriaId.isNotEmpty &&
+          movimiento.idCategoria != _filtroCategoriaId) {
         return false;
       }
 
-      if (_fechaInicio != null && movimiento.fechaMovimiento.isBefore(_fechaInicio!)) {
+      if (_fechaInicio != null &&
+          movimiento.fechaMovimiento.isBefore(_fechaInicio!)) {
         return false;
       }
 
@@ -132,9 +154,11 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
 
   Future<void> _mostrarDialogoEdicion(MovimientoModel movimiento) async {
     String tipoSeleccionado = movimiento.tipoMovimiento;
+
     final cantidadController = TextEditingController(
       text: movimiento.cantidad.toString(),
     );
+
     bool guardando = false;
 
     await showDialog<void>(
@@ -142,6 +166,8 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            final colores = Theme.of(context).colorScheme;
+
             return AlertDialog(
               title: const Text('Editar movimiento'),
               content: Column(
@@ -154,7 +180,10 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                       labelText: 'Tipo de movimiento',
                     ),
                     items: const [
-                      DropdownMenuItem(value: 'Entrada', child: Text('Entrada')),
+                      DropdownMenuItem(
+                        value: 'Entrada',
+                        child: Text('Entrada'),
+                      ),
                       DropdownMenuItem(value: 'Salida', child: Text('Salida')),
                     ],
                     onChanged: guardando
@@ -163,13 +192,16 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                             if (value == null) {
                               return;
                             }
+
                             setDialogState(() => tipoSeleccionado = value);
                           },
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: cantidadController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     decoration: const InputDecoration(labelText: 'Cantidad'),
                   ),
                 ],
@@ -178,7 +210,9 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                 TextButton(
                   onPressed: guardando
                       ? null
-                      : () => Navigator.of(dialogContext).pop(),
+                      : () {
+                          Navigator.of(dialogContext).pop();
+                        },
                   child: const Text('Cancelar'),
                 ),
                 FilledButton(
@@ -188,6 +222,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                           final nuevaCantidad = double.tryParse(
                             cantidadController.text.trim(),
                           );
+
                           if (nuevaCantidad == null || nuevaCantidad <= 0) {
                             ScaffoldMessenger.of(dialogContext).showSnackBar(
                               const SnackBar(
@@ -196,10 +231,12 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                                 ),
                               ),
                             );
+
                             return;
                           }
 
                           setDialogState(() => guardando = true);
+
                           try {
                             await _controller.editarMovimiento(
                               movimiento: movimiento,
@@ -210,27 +247,41 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                             if (!dialogContext.mounted) {
                               return;
                             }
+
                             Navigator.of(dialogContext).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Movimiento actualizado correctamente'),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
+
+                            if (mounted) {
+                              ScaffoldMessenger.of(this.context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Movimiento actualizado correctamente',
+                                    style: TextStyle(color: colores.onTertiary),
+                                  ),
+                                  backgroundColor: colores.tertiary,
+                                ),
+                              );
+                            }
                           } catch (error) {
                             setDialogState(() => guardando = false);
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              SnackBar(content: Text('No se pudo actualizar: $error')),
-                            );
+
+                            if (dialogContext.mounted) {
+                              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'No se pudo actualizar: $error',
+                                  ),
+                                ),
+                              );
+                            }
                           }
                         },
                   child: guardando
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: colores.onPrimary,
                           ),
                         )
                       : const Text('Guardar'),
@@ -246,22 +297,32 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
   }
 
   Future<void> _confirmarEliminacion(MovimientoModel movimiento) async {
+    final colores = Theme.of(context).colorScheme;
+
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Eliminar movimiento'),
           content: Text(
-            '¿Deseas eliminar este registro de ${movimiento.tipoMovimiento.toLowerCase()}?',
+            '¿Deseas eliminar este registro de '
+            '${movimiento.tipoMovimiento.toLowerCase()}?',
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
               child: const Text('Cancelar'),
             ),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.red),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: colores.error,
+                foregroundColor: colores.onError,
+              ),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
               child: const Text('Eliminar'),
             ),
           ],
@@ -275,22 +336,28 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
 
     try {
       await _controller.eliminarMovimiento(movimiento);
+
       if (!mounted) {
         return;
       }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Movimiento eliminado correctamente'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: Text(
+            'Movimiento eliminado correctamente',
+            style: TextStyle(color: colores.onError),
+          ),
+          backgroundColor: colores.error,
         ),
       );
     } catch (error) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo eliminar: $error')),
-      );
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('No se pudo eliminar: $error')));
     }
   }
 
@@ -306,18 +373,18 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final colores = tema.colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 248, 244, 250),
-      appBar: AppBar(
-        title: const Text('Movimientos'),
-        backgroundColor: const Color.fromARGB(254, 74, 63, 207),
-        foregroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: const Text('Movimientos')),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: _streamCategorias,
         builder: (context, categoriasSnapshot) {
           if (categoriasSnapshot.hasError) {
-            return const Center(child: Text('No se pudieron cargar las categorías'));
+            return const Center(
+              child: Text('No se pudieron cargar las categorías'),
+            );
           }
 
           final categoriasDocs = categoriasSnapshot.data?.docs ?? [];
@@ -326,24 +393,31 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
             stream: _streamNegocios,
             builder: (context, negociosSnapshot) {
               if (negociosSnapshot.hasError) {
-                return const Center(child: Text('No se pudieron cargar los negocios'));
+                return const Center(
+                  child: Text('No se pudieron cargar los negocios'),
+                );
               }
 
               final negociosDocs = negociosSnapshot.data?.docs ?? [];
+
               final categoriasVisibles = _filtroNegocioId.isEmpty
                   ? categoriasDocs
                   : categoriasDocs.where((doc) {
-                      final negocioIdCategoria =
-                          (doc.data()['negocioId'] ?? '').toString();
+                      final negocioIdCategoria = (doc.data()['negocioId'] ?? '')
+                          .toString();
+
                       return negocioIdCategoria == _filtroNegocioId;
                     }).toList();
 
               if (_filtroCategoriaId.isNotEmpty &&
-                  !categoriasVisibles.any((doc) => doc.id == _filtroCategoriaId)) {
+                  !categoriasVisibles.any(
+                    (doc) => doc.id == _filtroCategoriaId,
+                  )) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (!mounted) {
                     return;
                   }
+
                   setState(() => _filtroCategoriaId = '');
                 });
               }
@@ -381,30 +455,40 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                             ),
                           ],
                         ),
+
                         const SizedBox(height: 10),
+
                         DropdownButtonFormField<String>(
                           key: ValueKey('filtro-$_tipoMovimiento'),
                           initialValue: _tipoMovimiento,
                           decoration: const InputDecoration(
                             labelText: 'Tipo de movimiento',
-                            border: OutlineInputBorder(),
                           ),
                           items: const [
-                            DropdownMenuItem(value: 'Todos', child: Text('Todos')),
+                            DropdownMenuItem(
+                              value: 'Todos',
+                              child: Text('Todos'),
+                            ),
                             DropdownMenuItem(
                               value: 'Entrada',
                               child: Text('Entrada'),
                             ),
-                            DropdownMenuItem(value: 'Salida', child: Text('Salida')),
+                            DropdownMenuItem(
+                              value: 'Salida',
+                              child: Text('Salida'),
+                            ),
                           ],
                           onChanged: (value) {
                             if (value == null) {
                               return;
                             }
+
                             setState(() => _tipoMovimiento = value);
                           },
                         ),
+
                         const SizedBox(height: 10),
+
                         Row(
                           children: [
                             Expanded(
@@ -415,11 +499,12 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                                     : _filtroNegocioId,
                                 decoration: const InputDecoration(
                                   labelText: 'Negocio',
-                                  border: OutlineInputBorder(),
                                 ),
+                                isExpanded: true,
                                 items: negociosDocs.map((doc) {
-                                  final nombre =
-                                      (doc.data()['nombre'] ?? '').toString();
+                                  final nombre = (doc.data()['nombre'] ?? '')
+                                      .toString();
+
                                   return DropdownMenuItem<String>(
                                     value: doc.id,
                                     child: Text(
@@ -430,12 +515,15 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                                 onChanged: (value) {
                                   setState(() {
                                     _filtroNegocioId = value ?? '';
+
                                     _filtroCategoriaId = '';
                                   });
                                 },
                               ),
                             ),
+
                             const SizedBox(width: 8),
+
                             Expanded(
                               child: DropdownButtonFormField<String>(
                                 key: ValueKey('categoria-$_filtroCategoriaId'),
@@ -444,11 +532,12 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                                     : _filtroCategoriaId,
                                 decoration: const InputDecoration(
                                   labelText: 'Categoría',
-                                  border: OutlineInputBorder(),
                                 ),
+                                isExpanded: true,
                                 items: categoriasVisibles.map((doc) {
-                                  final nombre =
-                                      (doc.data()['nombre'] ?? '').toString();
+                                  final nombre = (doc.data()['nombre'] ?? '')
+                                      .toString();
+
                                   return DropdownMenuItem<String>(
                                     value: doc.id,
                                     child: Text(
@@ -457,13 +546,17 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                                   );
                                 }).toList(),
                                 onChanged: (value) {
-                                  setState(() => _filtroCategoriaId = value ?? '');
+                                  setState(
+                                    () => _filtroCategoriaId = value ?? '',
+                                  );
                                 },
                               ),
                             ),
                           ],
                         ),
+
                         const SizedBox(height: 10),
+
                         Align(
                           alignment: Alignment.centerRight,
                           child: OutlinedButton.icon(
@@ -475,13 +568,16 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                       ],
                     ),
                   ),
+
                   Expanded(
                     child: StreamBuilder<List<MovimientoModel>>(
                       stream: _controller.obtenerMovimientosActivos(),
                       builder: (context, snapshot) {
                         if (snapshot.hasError) {
                           return const Center(
-                            child: Text('No se pudieron cargar los movimientos'),
+                            child: Text(
+                              'No se pudieron cargar los movimientos',
+                            ),
                           );
                         }
 
@@ -494,6 +590,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                         final movimientosFiltrados = _filtrarMovimientos(
                           snapshot.data!,
                         );
+
                         if (movimientosFiltrados.isEmpty) {
                           return const Center(
                             child: Text('No hay movimientos para mostrar'),
@@ -505,10 +602,13 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                           itemCount: movimientosFiltrados.length,
                           itemBuilder: (context, index) {
                             final movimiento = movimientosFiltrados[index];
-                            final esEntrada = movimiento.tipoMovimiento == 'Entrada';
+
+                            final esEntrada =
+                                movimiento.tipoMovimiento == 'Entrada';
+
                             final colorTipo = esEntrada
-                                ? Colors.green
-                                : Colors.orange;
+                                ? colores.tertiary
+                                : colores.error;
 
                             return Card(
                               margin: const EdgeInsets.only(bottom: 10),
@@ -517,17 +617,21 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                                 child: Row(
                                   children: [
                                     GestureDetector(
-                                      onDoubleTap: () =>
-                                          _mostrarDialogoEdicion(movimiento),
-                                      child: const CircleAvatar(
-                                        backgroundColor: Color(0xFFE2E8F0),
+                                      onDoubleTap: () {
+                                        _mostrarDialogoEdicion(movimiento);
+                                      },
+                                      child: CircleAvatar(
+                                        backgroundColor:
+                                            colores.surfaceContainerHighest,
                                         child: Icon(
                                           Icons.image,
-                                          color: Colors.black54,
+                                          color: colores.onSurfaceVariant,
                                         ),
                                       ),
                                     ),
+
                                     const SizedBox(width: 10),
+
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment:
@@ -540,46 +644,57 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                                               fontSize: 16,
                                             ),
                                           ),
+
                                           const SizedBox(height: 4),
+
                                           Text(
                                             'Código: ${movimiento.codigoProducto}',
                                           ),
+
                                           Text(
                                             'Fecha: ${_formatearFecha(movimiento.fechaMovimiento)}',
                                           ),
+
                                           Text(
                                             'Tipo: ${movimiento.tipoMovimiento}',
-                                            style: TextStyle(color: colorTipo),
+                                            style: TextStyle(
+                                              color: colorTipo,
+                                              fontWeight: FontWeight.w600,
+                                            ),
                                           ),
+
                                           Text(
                                             'Cantidad: ${movimiento.cantidad}',
                                           ),
                                         ],
                                       ),
                                     ),
+
                                     Row(
-                                     mainAxisSize: MainAxisSize.min,
-                                     children: [
-                                     IconButton(
-                                      onPressed: () =>
-                                     _mostrarDialogoEdicion(movimiento),
-                                     icon: const Icon(
-                                     Icons.edit,
-                                      color: _colorPrincipal,
-                                      ),
-                                       tooltip: 'Editar movimiento',
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          onPressed: () {
+                                            _mostrarDialogoEdicion(movimiento);
+                                          },
+                                          icon: Icon(
+                                            Icons.edit,
+                                            color: colores.primary,
+                                          ),
+                                          tooltip: 'Editar movimiento',
+                                        ),
+                                        IconButton(
+                                          onPressed: () {
+                                            _confirmarEliminacion(movimiento);
+                                          },
+                                          icon: Icon(
+                                            Icons.delete,
+                                            color: colores.error,
+                                          ),
+                                          tooltip: 'Eliminar movimiento',
+                                        ),
+                                      ],
                                     ),
-                                     IconButton(
-                                     onPressed: () =>
-                                      _confirmarEliminacion(movimiento),
-                                      icon: const Icon(
-                                      Icons.delete,
-                                     color: Colors.red,
-                                    ),
-                                     tooltip: 'Eliminar movimiento',
-                                       ),
-                                           ],
-                                           ),
                                   ],
                                 ),
                               ),

@@ -27,8 +27,6 @@ class _PerfilUsuarioScreenState extends State<PerfilUsuarioScreen> {
   DateTime? _fechaNacimiento;
   int _estado = 1;
 
-  static const Color _colorPrincipal = Color.fromARGB(255, 28, 83, 170);
-
   @override
   void initState() {
     super.initState();
@@ -194,39 +192,12 @@ class _PerfilUsuarioScreenState extends State<PerfilUsuarioScreen> {
     String? hint,
     Widget? sufijo,
   }) {
-    final esOscuro = Theme.of(context).brightness == Brightness.dark;
-
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      prefixIcon: Icon(icono, color: _colorPrincipal),
+      prefixIcon: Icon(icono),
       suffixIcon: sufijo,
-      filled: true,
-      fillColor: esOscuro ? const Color(0xFF292929) : const Color(0xFFF7F7FA),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(
-          color: esOscuro ? Colors.white24 : Colors.grey.shade300,
-        ),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(
-          color: esOscuro ? Colors.white24 : Colors.grey.shade300,
-        ),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: _colorPrincipal, width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.red),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.red, width: 2),
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
   }
 
@@ -241,32 +212,20 @@ class _PerfilUsuarioScreenState extends State<PerfilUsuarioScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final colores = tema.colorScheme;
+
     final email = _authService.usuarioActual?.email ?? 'Sin correo';
 
-    final esOscuro = Theme.of(context).brightness == Brightness.dark;
-
-    final colorFondo = esOscuro
-        ? const Color(0xFF121212)
-        : const Color.fromARGB(255, 248, 244, 250);
-
-    final colorTarjeta = esOscuro ? const Color(0xFF202020) : Colors.white;
-
-    final colorTexto = esOscuro ? Colors.white : const Color(0xFF303030);
-
-    final colorSecundario = esOscuro ? Colors.white70 : Colors.black54;
+    final colorEstado = _estado == 1 ? colores.tertiary : colores.error;
 
     return Scaffold(
-      backgroundColor: colorFondo,
-
       appBar: AppBar(
-        backgroundColor: _colorPrincipal,
-        foregroundColor: Colors.white,
         title: const Text(
           'Perfil de usuario',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-
       body: SafeArea(
         child: _cargando
             ? const Center(child: CircularProgressIndicator())
@@ -277,88 +236,79 @@ class _PerfilUsuarioScreenState extends State<PerfilUsuarioScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: colorTarjeta,
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 58,
-                              height: 58,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE8EAF6),
-                                borderRadius: BorderRadius.circular(16),
+                      Card(
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: const EdgeInsets.all(18),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 58,
+                                height: 58,
+                                decoration: BoxDecoration(
+                                  color: colores.primaryContainer,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Icon(
+                                  Icons.person,
+                                  color: colores.primary,
+                                  size: 34,
+                                ),
                               ),
-                              child: const Icon(
-                                Icons.person,
-                                color: _colorPrincipal,
-                                size: 34,
-                              ),
-                            ),
 
-                            const SizedBox(width: 14),
+                              const SizedBox(width: 14),
 
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${_nombreController.text} ${_apellidoController.text}',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: colorTexto,
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 4),
-
-                                  Text(
-                                    email,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: colorSecundario,
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 7),
-
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _estado == 1
-                                          ? Colors.green.withValues(alpha: 0.12)
-                                          : Colors.red.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      _estado == 1 ? 'Activo' : 'Eliminado',
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${_nombreController.text} '
+                                      '${_apellidoController.text}',
                                       style: TextStyle(
-                                        color: _estado == 1
-                                            ? Colors.green.shade700
-                                            : Colors.red.shade700,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: colores.onSurface,
                                       ),
                                     ),
-                                  ),
-                                ],
+
+                                    const SizedBox(height: 4),
+
+                                    Text(
+                                      email,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: colores.onSurfaceVariant,
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 7),
+
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: colorEstado.withValues(
+                                          alpha: 0.12,
+                                        ),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        _estado == 1 ? 'Activo' : 'Eliminado',
+                                        style: TextStyle(
+                                          color: colorEstado,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
 
@@ -369,138 +319,136 @@ class _PerfilUsuarioScreenState extends State<PerfilUsuarioScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color: colorSecundario,
+                          color: colores.onSurfaceVariant,
                           letterSpacing: 0.6,
                         ),
                       ),
 
                       const SizedBox(height: 10),
 
-                      Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: colorTarjeta,
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.06),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            TextFormField(
-                              controller: _nombreController,
-                              textCapitalization: TextCapitalization.words,
-                              decoration: _decoracionCampo(
-                                label: 'Nombre',
-                                icono: Icons.person_outline,
-                              ),
-                              validator: (valor) {
-                                if (valor == null || valor.trim().isEmpty) {
-                                  return 'Ingresa tu nombre';
-                                }
-
-                                return null;
-                              },
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            TextFormField(
-                              controller: _apellidoController,
-                              textCapitalization: TextCapitalization.words,
-                              decoration: _decoracionCampo(
-                                label: 'Apellido',
-                                icono: Icons.badge_outlined,
-                              ),
-                              validator: (valor) {
-                                if (valor == null || valor.trim().isEmpty) {
-                                  return 'Ingresa tu apellido';
-                                }
-
-                                return null;
-                              },
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            FormField<DateTime>(
-                              validator: (_) {
-                                if (_fechaNacimiento == null) {
-                                  return 'Selecciona tu fecha de nacimiento';
-                                }
-
-                                return null;
-                              },
-                              builder: (campo) {
-                                return InkWell(
-                                  borderRadius: BorderRadius.circular(14),
-                                  onTap: _guardando
-                                      ? null
-                                      : () async {
-                                          await _seleccionarFechaNacimiento();
-
-                                          campo.didChange(_fechaNacimiento);
-                                        },
-                                  child: InputDecorator(
-                                    decoration: _decoracionCampo(
-                                      label: 'Fecha de nacimiento',
-                                      hint: 'DD/MM/AAAA',
-                                      icono: Icons.cake_outlined,
-                                      sufijo: const Icon(
-                                        Icons.calendar_today_outlined,
-                                        color: _colorPrincipal,
-                                        size: 20,
-                                      ),
-                                    ).copyWith(errorText: campo.errorText),
-                                    child: Text(
-                                      _fechaNacimiento == null
-                                          ? 'Selecciona una fecha'
-                                          : _formatearFecha(_fechaNacimiento!),
-                                      style: TextStyle(color: colorTexto),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            TextFormField(
-                              controller: _telefonoController,
-                              keyboardType: TextInputType.phone,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.allow(
-                                  RegExp(r'[0-9+]'),
+                      Card(
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: const EdgeInsets.all(18),
+                          child: Column(
+                            children: [
+                              TextFormField(
+                                controller: _nombreController,
+                                textCapitalization: TextCapitalization.words,
+                                decoration: _decoracionCampo(
+                                  label: 'Nombre',
+                                  icono: Icons.person_outline,
                                 ),
-                              ],
-                              decoration: _decoracionCampo(
-                                label: 'Número telefónico',
-                                hint: '+50499999999',
-                                icono: Icons.phone_outlined,
+                                validator: (valor) {
+                                  if (valor == null || valor.trim().isEmpty) {
+                                    return 'Ingresa tu nombre';
+                                  }
+
+                                  return null;
+                                },
                               ),
-                              validator: (valor) {
-                                final telefono = valor?.trim() ?? '';
 
-                                if (telefono.isEmpty) {
-                                  return 'Ingresa tu número telefónico';
-                                }
+                              const SizedBox(height: 16),
 
-                                if (!telefono.startsWith('+')) {
-                                  return 'Incluye el código de país. Ejemplo: +50499999999';
-                                }
+                              TextFormField(
+                                controller: _apellidoController,
+                                textCapitalization: TextCapitalization.words,
+                                decoration: _decoracionCampo(
+                                  label: 'Apellido',
+                                  icono: Icons.badge_outlined,
+                                ),
+                                validator: (valor) {
+                                  if (valor == null || valor.trim().isEmpty) {
+                                    return 'Ingresa tu apellido';
+                                  }
 
-                                if (telefono.length < 11) {
-                                  return 'Ingresa un número telefónico válido';
-                                }
+                                  return null;
+                                },
+                              ),
 
-                                return null;
-                              },
-                            ),
-                          ],
+                              const SizedBox(height: 16),
+
+                              FormField<DateTime>(
+                                validator: (_) {
+                                  if (_fechaNacimiento == null) {
+                                    return 'Selecciona tu fecha de nacimiento';
+                                  }
+
+                                  return null;
+                                },
+                                builder: (campo) {
+                                  return InkWell(
+                                    borderRadius: BorderRadius.circular(14),
+                                    onTap: _guardando
+                                        ? null
+                                        : () async {
+                                            await _seleccionarFechaNacimiento();
+
+                                            campo.didChange(_fechaNacimiento);
+                                          },
+                                    child: InputDecorator(
+                                      decoration: _decoracionCampo(
+                                        label: 'Fecha de nacimiento',
+                                        hint: 'DD/MM/AAAA',
+                                        icono: Icons.cake_outlined,
+                                        sufijo: Icon(
+                                          Icons.calendar_today_outlined,
+                                          color: colores.primary,
+                                          size: 20,
+                                        ),
+                                      ).copyWith(errorText: campo.errorText),
+                                      child: Text(
+                                        _fechaNacimiento == null
+                                            ? 'Selecciona una fecha'
+                                            : _formatearFecha(
+                                                _fechaNacimiento!,
+                                              ),
+                                        style: TextStyle(
+                                          color: _fechaNacimiento == null
+                                              ? colores.onSurfaceVariant
+                                              : colores.onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              TextFormField(
+                                controller: _telefonoController,
+                                keyboardType: TextInputType.phone,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(
+                                    RegExp(r'[0-9+]'),
+                                  ),
+                                ],
+                                decoration: _decoracionCampo(
+                                  label: 'Número telefónico',
+                                  hint: '+50499999999',
+                                  icono: Icons.phone_outlined,
+                                ),
+                                validator: (valor) {
+                                  final telefono = valor?.trim() ?? '';
+
+                                  if (telefono.isEmpty) {
+                                    return 'Ingresa tu número telefónico';
+                                  }
+
+                                  if (!telefono.startsWith('+')) {
+                                    return 'Incluye el código de país. Ejemplo: +50499999999';
+                                  }
+
+                                  if (telefono.length < 11) {
+                                    return 'Ingresa un número telefónico válido';
+                                  }
+
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       ),
 
@@ -511,25 +459,24 @@ class _PerfilUsuarioScreenState extends State<PerfilUsuarioScreen> {
                           margin: const EdgeInsets.only(bottom: 16),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.10),
+                            color: colores.errorContainer,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: Colors.red.withValues(alpha: 0.30),
+                              color: colores.error.withValues(alpha: 0.35),
                             ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(
-                                Icons.error_outline,
-                                color: Colors.red,
-                              ),
+                              Icon(Icons.error_outline, color: colores.error),
 
                               const SizedBox(width: 10),
 
                               Expanded(
                                 child: Text(
                                   _error!,
-                                  style: const TextStyle(color: Colors.red),
+                                  style: TextStyle(
+                                    color: colores.onErrorContainer,
+                                  ),
                                 ),
                               ),
                             ],
@@ -540,23 +487,16 @@ class _PerfilUsuarioScreenState extends State<PerfilUsuarioScreen> {
                         height: 52,
                         child: ElevatedButton.icon(
                           onPressed: _guardando ? null : _guardarCambios,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _colorPrincipal,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
                           icon: _guardando
                               ? const SizedBox.shrink()
                               : const Icon(Icons.save_outlined),
                           label: _guardando
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 22,
                                   height: 22,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Colors.white,
+                                    color: colores.onPrimary,
                                   ),
                                 )
                               : const Text(
