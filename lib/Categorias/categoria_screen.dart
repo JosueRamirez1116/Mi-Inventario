@@ -14,8 +14,10 @@ class CategoriaScreen extends StatefulWidget {
 class _CategoriaScreenState extends State<CategoriaScreen> {
   final CategoriaService _service = CategoriaService();
   final TextEditingController _busquedaController = TextEditingController();
+
   List<CategoriaModel> _categoriasFiltradas = [];
   bool _modoBusqueda = false;
+
   List<Map<String, String>> _negociosUsuario = [];
   String? _negocioSeleccionadoId;
 
@@ -34,13 +36,18 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
   Future<void> _cargarNegociosDelUsuario() async {
     try {
       final negocios = await _service.obtenerNegociosDelUsuario();
+
       if (!mounted) return;
 
       setState(() {
         _negociosUsuario = negocios;
+
         if (negocios.isNotEmpty) {
-          final tieneSeleccionValida = _negocioSeleccionadoId != null &&
-              negocios.any((negocio) => negocio['id'] == _negocioSeleccionadoId);
+          final tieneSeleccionValida =
+              _negocioSeleccionadoId != null &&
+              negocios.any(
+                (negocio) => negocio['id'] == _negocioSeleccionadoId,
+              );
 
           if (!tieneSeleccionValida) {
             _negocioSeleccionadoId = negocios.first['id'];
@@ -66,17 +73,26 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
     if (_negociosUsuario.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Primero crea al menos un negocio para asignarle la categoría.'),
+          content: Text(
+            'Primero crea al menos un negocio para asignarle la categoría.',
+          ),
         ),
       );
       return;
     }
 
     final esEdicion = categoria != null;
-    final nombreController = TextEditingController(text: categoria?.nombre ?? '');
-    final descripcionController =
-        TextEditingController(text: categoria?.descripcion ?? '');
+
+    final nombreController = TextEditingController(
+      text: categoria?.nombre ?? '',
+    );
+
+    final descripcionController = TextEditingController(
+      text: categoria?.descripcion ?? '',
+    );
+
     final formKey = GlobalKey<FormState>();
+
     bool guardando = false;
 
     String? negocioSeleccionado = categoria?.negocioId.isNotEmpty == true
@@ -84,7 +100,9 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
         : _negocioSeleccionadoId;
 
     if (negocioSeleccionado == null ||
-        !_negociosUsuario.any((negocio) => negocio['id'] == negocioSeleccionado)) {
+        !_negociosUsuario.any(
+          (negocio) => negocio['id'] == negocioSeleccionado,
+        )) {
       negocioSeleccionado = _negociosUsuario.first['id'];
     }
 
@@ -94,6 +112,8 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (dialogContext, setStateDialogo) {
+            final colores = Theme.of(dialogContext).colorScheme;
+
             return AlertDialog(
               title: Text(esEdicion ? 'Editar categoria' : 'Nueva categoria'),
               content: Form(
@@ -121,10 +141,13 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
                           if (valor == null || valor.isEmpty) {
                             return 'Selecciona un negocio';
                           }
+
                           return null;
                         },
                       ),
+
                       const SizedBox(height: 12),
+
                       TextFormField(
                         controller: nombreController,
                         textCapitalization: TextCapitalization.words,
@@ -136,10 +159,13 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
                           if (valor == null || valor.trim().isEmpty) {
                             return 'Ingresa un nombre';
                           }
+
                           return null;
                         },
                       ),
+
                       const SizedBox(height: 12),
+
                       TextFormField(
                         controller: descripcionController,
                         textCapitalization: TextCapitalization.sentences,
@@ -152,6 +178,7 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
                           if (valor == null || valor.trim().isEmpty) {
                             return 'Ingresa una descripcion';
                           }
+
                           return null;
                         },
                       ),
@@ -161,31 +188,42 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: guardando ? null : () => Navigator.of(dialogContext).pop(),
+                  onPressed: guardando
+                      ? null
+                      : () {
+                          Navigator.of(dialogContext).pop();
+                        },
                   child: const Text('Cancelar'),
                 ),
                 FilledButton(
                   onPressed: guardando
                       ? null
                       : () async {
-                          if (!formKey.currentState!.validate()) return;
-                          if (negocioSeleccionado == null || negocioSeleccionado!.isEmpty) {
+                          if (!formKey.currentState!.validate()) {
+                            return;
+                          }
+
+                          if (negocioSeleccionado == null ||
+                              negocioSeleccionado!.isEmpty) {
                             return;
                           }
 
                           setStateDialogo(() => guardando = true);
 
-                          final negocioSeleccionadoDatos = _negociosUsuario.firstWhere(
-                            (negocio) => negocio['id'] == negocioSeleccionado,
-                            orElse: () => {'id': '', 'nombre': ''},
-                          );
+                          final negocioSeleccionadoDatos = _negociosUsuario
+                              .firstWhere(
+                                (negocio) =>
+                                    negocio['id'] == negocioSeleccionado,
+                                orElse: () => {'id': '', 'nombre': ''},
+                              );
 
                           final modelo = CategoriaModel(
                             id: categoria?.id,
                             nombre: nombreController.text.trim(),
                             descripcion: descripcionController.text.trim(),
                             negocioId: negocioSeleccionado!,
-                            negocioNombre: negocioSeleccionadoDatos['nombre'] ?? '',
+                            negocioNombre:
+                                negocioSeleccionadoDatos['nombre'] ?? '',
                             usuarioId: categoria?.usuarioId ?? '',
                           );
 
@@ -201,6 +239,7 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
                             }
                           } catch (e) {
                             setStateDialogo(() => guardando = false);
+
                             if (dialogContext.mounted) {
                               ScaffoldMessenger.of(dialogContext).showSnackBar(
                                 SnackBar(
@@ -215,10 +254,13 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
                           }
                         },
                   child: guardando
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 18,
                           width: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colores.onPrimary,
+                          ),
                         )
                       : Text(esEdicion ? 'Guardar' : 'Crear'),
                 ),
@@ -231,6 +273,8 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
   }
 
   Future<void> _confirmarEliminacion(CategoriaModel categoria) async {
+    final colores = Theme.of(context).colorScheme;
+
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -239,12 +283,19 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
           content: Text('¿Deseas eliminar "${categoria.nombre}"?'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
               child: const Text('Cancelar'),
             ),
             FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: colores.error,
+                foregroundColor: colores.onError,
+              ),
               child: const Text('Eliminar'),
             ),
           ],
@@ -256,6 +307,7 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
 
     try {
       await _service.eliminarCategoria(categoria.id!);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('"${categoria.nombre}" eliminada')),
@@ -272,13 +324,18 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
 
   Future<void> _buscar(String texto) async {
     setState(() => _modoBusqueda = true);
+
     if (texto.trim().isEmpty) {
       setState(() => _categoriasFiltradas = []);
       return;
     }
 
     try {
-      final resultados = await _service.buscarPorNombre(widget.negocioId, texto.trim());
+      final resultados = await _service.buscarPorNombre(
+        widget.negocioId,
+        texto.trim(),
+      );
+
       if (mounted) {
         setState(() => _categoriasFiltradas = resultados);
       }
@@ -291,7 +348,13 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final colores = tema.colorScheme;
+
     final streamCategorias = _service.obtenerCategorias(widget.negocioId);
+
+    final colorTextoAppBar =
+        tema.appBarTheme.foregroundColor ?? colores.onSurface;
 
     return Scaffold(
       appBar: AppBar(
@@ -299,9 +362,18 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
             ? TextField(
                 controller: _busquedaController,
                 autofocus: true,
-                decoration: const InputDecoration(
+                style: TextStyle(color: colorTextoAppBar),
+                cursorColor: colorTextoAppBar,
+                decoration: InputDecoration(
                   hintText: 'Buscar categoria...',
+                  hintStyle: TextStyle(
+                    color: colorTextoAppBar.withValues(alpha: 0.7),
+                  ),
+                  filled: false,
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
                 ),
                 onChanged: _buscar,
               )
@@ -330,6 +402,7 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
               itemCount: _categoriasFiltradas.length,
               itemBuilder: (context, index) {
                 final categoria = _categoriasFiltradas[index];
+
                 return _buildItemCategoria(categoria);
               },
             )
@@ -347,11 +420,15 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                          Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: colores.error,
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             'Error al cargar categorias',
-                            style: Theme.of(context).textTheme.titleMedium,
+                            style: tema.textTheme.titleMedium,
                           ),
                           const SizedBox(height: 8),
                           ElevatedButton.icon(
@@ -376,16 +453,24 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.folder_open_outlined, size: 64, color: Colors.grey[400]),
+                          Icon(
+                            Icons.folder_open_outlined,
+                            size: 64,
+                            color: colores.onSurfaceVariant.withValues(
+                              alpha: 0.65,
+                            ),
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             'No hay categorias',
-                            style: Theme.of(context).textTheme.titleMedium,
+                            style: tema.textTheme.titleMedium,
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'Presiona el boton + para crear una',
-                            style: Theme.of(context).textTheme.bodyMedium,
+                            style: tema.textTheme.bodyMedium?.copyWith(
+                              color: colores.onSurfaceVariant,
+                            ),
                           ),
                         ],
                       ),
@@ -398,6 +483,7 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
                   itemCount: categorias.length,
                   itemBuilder: (context, index) {
                     final categoria = categorias[index];
+
                     return _buildItemCategoria(categoria);
                   },
                 );
@@ -412,14 +498,17 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
   }
 
   Widget _buildItemCategoria(CategoriaModel categoria) {
+    final tema = Theme.of(context);
+    final colores = tema.colorScheme;
+
     return Dismissible(
       key: Key(categoria.id ?? categoria.nombre),
       direction: DismissDirection.endToStart,
       background: Container(
-        color: Colors.red,
+        color: colores.error,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: const Icon(Icons.delete, color: Colors.white),
+        child: Icon(Icons.delete, color: colores.onError),
       ),
       confirmDismiss: (direction) async {
         return await showDialog<bool>(
@@ -430,12 +519,19 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
               content: Text('¿Deseas eliminar "${categoria.nombre}"?'),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop(false);
+                  },
                   child: const Text('Cancelar'),
                 ),
                 FilledButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(true),
-                  style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop(true);
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: colores.error,
+                    foregroundColor: colores.onError,
+                  ),
                   child: const Text('Eliminar'),
                 ),
               ],
@@ -446,6 +542,7 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
       onDismissed: (direction) async {
         try {
           await _service.eliminarCategoria(categoria.id!);
+
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('"${categoria.nombre}" eliminada')),
@@ -460,9 +557,9 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
         }
       },
       child: ListTile(
-        leading: const CircleAvatar(
-          backgroundColor: Colors.indigo,
-          child: Icon(Icons.category, color: Colors.white),
+        leading: CircleAvatar(
+          backgroundColor: colores.primaryContainer,
+          child: Icon(Icons.category, color: colores.primary),
         ),
         title: Text(
           categoria.nombre,
@@ -471,11 +568,15 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(categoria.descripcion.isEmpty ? 'Sin descripcion' : categoria.descripcion),
+            Text(
+              categoria.descripcion.isEmpty
+                  ? 'Sin descripcion'
+                  : categoria.descripcion,
+            ),
             if (categoria.negocioNombre.isNotEmpty)
               Text(
                 'Negocio: ${categoria.negocioNombre}',
-                style: const TextStyle(color: Colors.grey),
+                style: TextStyle(color: colores.onSurfaceVariant),
               ),
           ],
         ),
@@ -498,13 +599,13 @@ class _CategoriaScreenState extends State<CategoriaScreen> {
                 ],
               ),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'eliminar',
               child: Row(
                 children: [
-                  Icon(Icons.delete, size: 20, color: Colors.red),
-                  SizedBox(width: 12),
-                  Text('Eliminar', style: TextStyle(color: Colors.red)),
+                  Icon(Icons.delete, size: 20, color: colores.error),
+                  const SizedBox(width: 12),
+                  Text('Eliminar', style: TextStyle(color: colores.error)),
                 ],
               ),
             ),

@@ -17,8 +17,6 @@ class NegocioFormScreen extends StatefulWidget {
 }
 
 class _NegocioFormScreenState extends State<NegocioFormScreen> {
-  static const Color _colorPrincipal = Color.fromARGB(255, 28, 83, 170);
-
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _nombreController;
@@ -99,10 +97,15 @@ class _NegocioFormScreenState extends State<NegocioFormScreen> {
         return;
       }
 
+      final colores = Theme.of(context).colorScheme;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(error.message ?? 'Firebase rechazó la operación'),
-          backgroundColor: Colors.red,
+          content: Text(
+            error.message ?? 'Firebase rechazó la operación',
+            style: TextStyle(color: colores.onError),
+          ),
+          backgroundColor: colores.error,
         ),
       );
     } catch (error) {
@@ -110,10 +113,15 @@ class _NegocioFormScreenState extends State<NegocioFormScreen> {
         return;
       }
 
+      final colores = Theme.of(context).colorScheme;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('No se pudo guardar el negocio: $error'),
-          backgroundColor: Colors.red,
+          content: Text(
+            'No se pudo guardar el negocio: $error',
+            style: TextStyle(color: colores.onError),
+          ),
+          backgroundColor: colores.error,
         ),
       );
     } finally {
@@ -185,64 +193,22 @@ class _NegocioFormScreenState extends State<NegocioFormScreen> {
     required String label,
     required String hint,
     required IconData icono,
-    required bool esOscuro,
   }) {
-    final colorCampo = esOscuro ? const Color(0xFF292929) : Colors.white;
-
-    final colorSecundario = esOscuro ? Colors.white60 : Colors.black54;
-
-    final colorBorde = esOscuro ? Colors.white24 : Colors.grey.shade300;
-
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      labelStyle: TextStyle(color: colorSecundario),
-      hintStyle: TextStyle(color: colorSecundario),
-      prefixIcon: Icon(icono, color: _colorPrincipal),
-      filled: true,
-      fillColor: colorCampo,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: colorBorde),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: colorBorde),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: _colorPrincipal, width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.red),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.red, width: 2),
-      ),
+      prefixIcon: Icon(icono),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final esOscuro = Theme.of(context).brightness == Brightness.dark;
-
-    final colorFondo = esOscuro
-        ? const Color(0xFF121212)
-        : const Color.fromARGB(255, 248, 244, 250);
-
-    final colorTarjeta = esOscuro ? const Color(0xFF202020) : Colors.white;
-
-    final colorTexto = esOscuro ? Colors.white : const Color(0xFF303030);
-
-    final colorSecundario = esOscuro ? Colors.white70 : Colors.black54;
+    final tema = Theme.of(context);
+    final colores = tema.colorScheme;
 
     return Scaffold(
-      backgroundColor: colorFondo,
       appBar: AppBar(
-        backgroundColor: _colorPrincipal,
-        foregroundColor: Colors.white,
         title: Text(
           esEdicion ? 'Editar negocio' : 'Registrar negocio',
           style: const TextStyle(fontWeight: FontWeight.bold),
@@ -257,145 +223,132 @@ class _NegocioFormScreenState extends State<NegocioFormScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: colorTarjeta,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(
-                          alpha: esOscuro ? 0.20 : 0.08,
+                Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 75,
+                          height: 75,
+                          decoration: BoxDecoration(
+                            color: colores.primaryContainer,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Icon(
+                            Icons.storefront_rounded,
+                            size: 44,
+                            color: colores.primary,
+                          ),
                         ),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 75,
-                        height: 75,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE8EAF6),
-                          borderRadius: BorderRadius.circular(20),
+                        const SizedBox(height: 14),
+                        Text(
+                          esEdicion
+                              ? 'Actualizar información'
+                              : 'Nuevo negocio',
+                          textAlign: TextAlign.center,
+                          style: tema.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colores.onSurface,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.storefront_rounded,
-                          size: 44,
-                          color: _colorPrincipal,
+                        const SizedBox(height: 6),
+                        Text(
+                          esEdicion
+                              ? 'Modifique los datos que desea actualizar.'
+                              : 'Complete los datos solicitados.',
+                          textAlign: TextAlign.center,
+                          style: tema.textTheme.bodyMedium?.copyWith(
+                            color: colores.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        esEdicion ? 'Actualizar información' : 'Nuevo negocio',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: colorTexto,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        esEdicion
-                            ? 'Modifique los datos que desea actualizar.'
-                            : 'Complete los datos solicitados.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 13, color: colorSecundario),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
+
                 const SizedBox(height: 24),
+
                 Text(
                   'INFORMACIÓN DEL NEGOCIO',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: colorSecundario,
+                    color: colores.onSurfaceVariant,
                     letterSpacing: 0.6,
                   ),
                 ),
+
                 const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: colorTarjeta,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(
-                          alpha: esOscuro ? 0.20 : 0.06,
+
+                Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      children: [
+                        TextFormField(
+                          controller: _nombreController,
+                          validator: _validarNombre,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: _decoracionCampo(
+                            label: 'Nombre del negocio',
+                            hint: 'Ejemplo: Mi Tienda',
+                            icono: Icons.store,
+                          ),
                         ),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      TextFormField(
-                        controller: _nombreController,
-                        validator: _validarNombre,
-                        textCapitalization: TextCapitalization.words,
-                        style: TextStyle(color: colorTexto),
-                        decoration: _decoracionCampo(
-                          label: 'Nombre del negocio',
-                          hint: 'Ejemplo: Mi Tienda',
-                          icono: Icons.store,
-                          esOscuro: esOscuro,
+
+                        const SizedBox(height: 16),
+
+                        TextFormField(
+                          controller: _direccionController,
+                          validator: _validarDireccion,
+                          textCapitalization: TextCapitalization.sentences,
+                          maxLines: 2,
+                          decoration: _decoracionCampo(
+                            label: 'Dirección',
+                            hint: 'Ejemplo: Choloma, Cortés',
+                            icono: Icons.location_on,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _direccionController,
-                        validator: _validarDireccion,
-                        textCapitalization: TextCapitalization.sentences,
-                        maxLines: 2,
-                        style: TextStyle(color: colorTexto),
-                        decoration: _decoracionCampo(
-                          label: 'Dirección',
-                          hint: 'Ejemplo: Choloma, Cortés',
-                          icono: Icons.location_on,
-                          esOscuro: esOscuro,
+
+                        const SizedBox(height: 16),
+
+                        TextFormField(
+                          controller: _telefonoController,
+                          validator: _validarTelefono,
+                          keyboardType: TextInputType.phone,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(8),
+                          ],
+                          decoration: _decoracionCampo(
+                            label: 'Número telefónico',
+                            hint: 'Ejemplo: 98765432',
+                            icono: Icons.phone,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _telefonoController,
-                        validator: _validarTelefono,
-                        keyboardType: TextInputType.phone,
-                        style: TextStyle(color: colorTexto),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(8),
-                        ],
-                        decoration: _decoracionCampo(
-                          label: 'Número telefónico',
-                          hint: 'Ejemplo: 98765432',
-                          icono: Icons.phone,
-                          esOscuro: esOscuro,
+
+                        const SizedBox(height: 16),
+
+                        TextFormField(
+                          controller: _correoController,
+                          validator: _validarCorreo,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: _decoracionCampo(
+                            label: 'Correo electrónico',
+                            hint: 'Ejemplo: negocio@gmail.com',
+                            icono: Icons.email,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _correoController,
-                        validator: _validarCorreo,
-                        keyboardType: TextInputType.emailAddress,
-                        style: TextStyle(color: colorTexto),
-                        decoration: _decoracionCampo(
-                          label: 'Correo electrónico',
-                          hint: 'Ejemplo: negocio@gmail.com',
-                          icono: Icons.email,
-                          esOscuro: esOscuro,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
+
                 const SizedBox(height: 22),
+
                 SizedBox(
                   height: 52,
                   child: ElevatedButton.icon(
@@ -404,12 +357,12 @@ class _NegocioFormScreenState extends State<NegocioFormScreen> {
                         ? const SizedBox.shrink()
                         : Icon(esEdicion ? Icons.save : Icons.add_business),
                     label: _guardando
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 22,
                             height: 22,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: colores.onPrimary,
                             ),
                           )
                         : Text(
@@ -421,17 +374,6 @@ class _NegocioFormScreenState extends State<NegocioFormScreen> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _colorPrincipal,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: _colorPrincipal.withValues(
-                        alpha: 0.6,
-                      ),
-                      disabledForegroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
                   ),
                 ),
               ],

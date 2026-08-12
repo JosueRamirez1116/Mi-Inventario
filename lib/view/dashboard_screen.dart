@@ -22,10 +22,6 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  static const Color _colorPrincipal = Color.fromARGB(255, 28, 83, 170);
-
-  static const Color _colorIconos = Color.fromARGB(255, 30, 112, 198);
-
   final DashboardController _controller = DashboardController();
 
   List<DashboardModel> opciones = [];
@@ -110,23 +106,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final esOscuro = Theme.of(context).brightness == Brightness.dark;
+    final tema = Theme.of(context);
+    final colores = tema.colorScheme;
+    final esOscuro = tema.brightness == Brightness.dark;
 
-    final colorFondo = esOscuro
-        ? const Color(0xFF121212)
-        : const Color.fromARGB(255, 248, 244, 250);
-
-    final colorTarjeta = esOscuro ? const Color(0xFF202020) : Colors.white;
-
-    final colorTexto = esOscuro ? Colors.white : const Color(0xFF303030);
-
-    final colorBorde = esOscuro ? Colors.white12 : Colors.transparent;
+    final radioTarjeta = esOscuro ? 18.0 : 14.0;
 
     return Scaffold(
-      backgroundColor: colorFondo,
       appBar: AppBar(
-        backgroundColor: _colorPrincipal,
-        foregroundColor: Colors.white,
         title: const Text(
           'Inicio - Mi Inventario',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -153,15 +140,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             final opcion = opciones[index];
 
             return Card(
-              elevation: esOscuro ? 2 : 5,
-              color: colorTarjeta,
-              shadowColor: esOscuro ? Colors.black54 : Colors.black26,
+              margin: EdgeInsets.zero,
+              clipBehavior: Clip.antiAlias,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-                side: BorderSide(color: colorBorde),
+                borderRadius: BorderRadius.circular(radioTarjeta),
+                side: BorderSide(color: colores.outline),
               ),
               child: InkWell(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(radioTarjeta),
                 onTap: () {
                   abrirOpcion(opcion);
                 },
@@ -174,25 +160,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         width: 62,
                         height: 62,
                         decoration: BoxDecoration(
-                          color: esOscuro
-                              ? const Color(0xFF282828)
-                              : const Color(0xFFF4F6FB),
-                          borderRadius: BorderRadius.circular(16),
+                          color: colores.primaryContainer,
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         child: Icon(
                           opcion.icono,
-                          size: 42,
-                          color: _colorIconos,
+                          size: 40,
+                          color: colores.primary,
                         ),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         opcion.titulo,
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 17,
+                        style: tema.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: colorTexto,
+                          color: colores.onSurface,
                         ),
                       ),
                     ],

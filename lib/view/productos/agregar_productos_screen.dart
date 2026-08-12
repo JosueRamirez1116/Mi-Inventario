@@ -5,7 +5,6 @@ import 'package:mi_inventario/controller/productos_controller.dart';
 import 'package:mi_inventario/model/productos_model.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-/// Pantalla para ingresar los datos de un nuevo producto.
 class AgregarProductosScreen extends StatefulWidget {
   const AgregarProductosScreen({super.key, this.producto});
 
@@ -17,6 +16,7 @@ class AgregarProductosScreen extends StatefulWidget {
 
 class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
   late final ProductosController controller;
+
   TextEditingController? _unidadAutocompleteController;
   VoidCallback? _unidadAutocompleteListener;
 
@@ -25,6 +25,7 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
   @override
   void initState() {
     super.initState();
+
     if (Get.isRegistered<ProductosController>()) {
       controller = Get.find<ProductosController>();
     } else {
@@ -41,7 +42,9 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
   Future<void> _generarCodigo() async {
     try {
       final codigo = await controller.generarCodigoBarraEAN13Unico();
+
       controller.controladorCodigoBarra.text = codigo;
+
       Get.snackbar(
         'Código generado',
         'EAN-13: $codigo',
@@ -64,6 +67,8 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
     await showModalBottomSheet<void>(
       context: context,
       builder: (bottomSheetContext) {
+        final colores = Theme.of(bottomSheetContext).colorScheme;
+
         return SafeArea(
           child: Wrap(
             children: [
@@ -72,6 +77,7 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                 title: const Text('Tomar foto'),
                 onTap: () {
                   Navigator.of(bottomSheetContext).pop();
+
                   controller.seleccionarImagenProducto(ImageSource.camera);
                 },
               ),
@@ -80,18 +86,20 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                 title: const Text('Elegir de galería'),
                 onTap: () {
                   Navigator.of(bottomSheetContext).pop();
+
                   controller.seleccionarImagenProducto(ImageSource.gallery);
                 },
               ),
               if (tieneFoto)
                 ListTile(
-                  leading: const Icon(Icons.delete_outline, color: Colors.red),
-                  title: const Text(
+                  leading: Icon(Icons.delete_outline, color: colores.error),
+                  title: Text(
                     'Quitar foto',
-                    style: TextStyle(color: Colors.red),
+                    style: TextStyle(color: colores.error),
                   ),
                   onTap: () {
                     Navigator.of(bottomSheetContext).pop();
+
                     controller.quitarFotoProducto();
                   },
                 ),
@@ -107,6 +115,7 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
       final resultado = await Navigator.of(context).push<String>(
         MaterialPageRoute(builder: (_) => const _MobileScannerPage()),
       );
+
       if (resultado != null && resultado.isNotEmpty) {
         controller.controladorCodigoBarra.text = resultado;
       }
@@ -121,36 +130,39 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
 
   @override
   void dispose() {
-    // limpiar any autocomplete listener
     if (_unidadAutocompleteController != null &&
         _unidadAutocompleteListener != null) {
       _unidadAutocompleteController!.removeListener(
         _unidadAutocompleteListener!,
       );
     }
+
     _unidadAutocompleteController = null;
     _unidadAutocompleteListener = null;
 
     controller.limpiarFormulario();
+
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    const appBarColor = Color(0xFF4338CA);
-    const fieldTextColor = Color(0xFF1E1B2E);
-    const fieldFillColor = Color(0xFFF5F6FA);
+    final tema = Theme.of(context);
+    final colores = tema.colorScheme;
+
+    final fieldFillColor =
+        tema.inputDecorationTheme.fillColor ?? colores.surface;
 
     final fieldTextStyle = TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w400,
-      color: fieldTextColor,
+      color: colores.onSurface,
     );
 
     final sectionTitleStyle = TextStyle(
       fontSize: 15,
       fontWeight: FontWeight.w700,
-      color: fieldTextColor,
+      color: colores.onSurface,
     );
 
     InputDecoration inputDecoration({
@@ -163,7 +175,7 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
         labelStyle: fieldTextStyle,
         helperStyle: fieldTextStyle.copyWith(
           fontSize: 10,
-          color: fieldTextColor.withValues(alpha: 0.7),
+          color: colores.onSurfaceVariant,
         ),
         filled: true,
         fillColor: fieldFillColor,
@@ -172,22 +184,28 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
           vertical: 18,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: fieldTextColor.withAlpha((0.15 * 255).round()),
+          borderRadius: BorderRadius.circular(
+            tema.brightness == Brightness.dark ? 12 : 10,
           ),
+          borderSide: BorderSide(color: colores.outline),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: appBarColor, width: 2),
+          borderRadius: BorderRadius.circular(
+            tema.brightness == Brightness.dark ? 12 : 10,
+          ),
+          borderSide: BorderSide(color: colores.primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Colors.redAccent),
+          borderRadius: BorderRadius.circular(
+            tema.brightness == Brightness.dark ? 12 : 10,
+          ),
+          borderSide: BorderSide(color: colores.error),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+          borderRadius: BorderRadius.circular(
+            tema.brightness == Brightness.dark ? 12 : 10,
+          ),
+          borderSide: BorderSide(color: colores.error, width: 2),
         ),
       );
     }
@@ -201,8 +219,6 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
 
     Widget sectionCard(List<Widget> children) {
       return Card(
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: EdgeInsets.zero,
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -218,13 +234,13 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
       appBar: AppBar(
         title: Text(
           _esEdicion ? 'Editar producto' : 'Agregar producto',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
         ),
-        backgroundColor: appBarColor,
-        foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
         ),
         actions: [
           Obx(
@@ -262,7 +278,9 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                     }).toList(),
                     onChanged: (valor) async {
                       if (valor == null) return;
+
                       controller.idNegocioSeleccionado.value = valor;
+
                       await controller.cargarCategoriasDelNegocio(valor);
                     },
                     validator: (valor) => valor == null || valor.isEmpty
@@ -295,15 +313,17 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                   ),
                 ),
               ]),
+
               const SizedBox(height: 16),
+
               sectionTitle('Detalle del producto'),
+
               sectionCard([
                 TextFormField(
                   controller: controller.controladorNombre,
                   style: fieldTextStyle,
                   decoration: inputDecoration(labelText: 'Nombre del producto'),
                   onChanged: (valor) {
-                    // Si es creación y aún no hay código, asignar uno incremental cuando empiece a escribir nombre
                     if (!_esEdicion &&
                         controller.controladorCodigoProducto.text
                             .trim()
@@ -314,7 +334,9 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                   },
                   validator: controller.validarCampoObligatorio,
                 ),
+
                 const SizedBox(height: 12),
+
                 TextFormField(
                   controller: controller.controladorDescripcion,
                   style: fieldTextStyle,
@@ -322,29 +344,34 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                   maxLines: 2,
                   validator: controller.validarCampoObligatorio,
                 ),
+
                 const SizedBox(height: 12),
+
                 Obx(() {
                   final archivoLocal = controller.imagenSeleccionada.value;
+
                   final urlExistente = controller.fotoProductoUrl.value;
+
                   final tieneFoto =
                       archivoLocal != null || urlExistente.isNotEmpty;
 
                   Widget contenidoFoto;
+
                   if (archivoLocal != null) {
                     contenidoFoto = Image.file(archivoLocal, fit: BoxFit.cover);
                   } else if (urlExistente.isNotEmpty) {
                     contenidoFoto = Image.network(
                       urlExistente,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(
+                      errorBuilder: (_, __, ___) => Icon(
                         Icons.broken_image_outlined,
-                        color: Colors.grey,
+                        color: colores.onSurfaceVariant,
                       ),
                     );
                   } else {
-                    contenidoFoto = const Icon(
+                    contenidoFoto = Icon(
                       Icons.add_a_photo_outlined,
-                      color: Colors.grey,
+                      color: colores.onSurfaceVariant,
                     );
                   }
 
@@ -385,7 +412,9 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                     ],
                   );
                 }),
+
                 const SizedBox(height: 12),
+
                 TextFormField(
                   controller: controller.controladorCodigoProducto,
                   style: fieldTextStyle,
@@ -395,6 +424,7 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                         helperText: 'Se asigna automáticamente (5 dígitos)',
                       ),
                 ),
+
                 const SizedBox(height: 12),
 
                 TextFormField(
@@ -408,17 +438,17 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.auto_awesome,
-                                color: Colors.indigo,
+                                color: colores.primary,
                               ),
                               tooltip: 'Generar EAN-13',
                               onPressed: _generarCodigo,
                             ),
                             IconButton(
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.qr_code_scanner,
-                                color: Colors.indigo,
+                                color: colores.primary,
                               ),
                               tooltip: 'Escanear código',
                               onPressed: _escanearCodigo,
@@ -428,8 +458,11 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                       ),
                 ),
               ]),
+
               const SizedBox(height: 16),
+
               sectionTitle('Inventario'),
+
               sectionCard([
                 Row(
                   children: [
@@ -465,7 +498,11 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                                     (TextEditingValue textEditingValue) {
                                       final text = textEditingValue.text
                                           .toLowerCase();
-                                      if (text.isEmpty) return commonUnits;
+
+                                      if (text.isEmpty) {
+                                        return commonUnits;
+                                      }
+
                                       return commonUnits.where(
                                         (u) => u.toLowerCase().contains(text),
                                       );
@@ -473,6 +510,7 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                                 onSelected: (selection) {
                                   controller.controladorUnidadMedida.text =
                                       selection;
+
                                   state.didChange(selection);
                                 },
                                 fieldViewBuilder:
@@ -482,10 +520,10 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                                       focusNode,
                                       onFieldSubmitted,
                                     ) {
-                                      // Ensure controller and internal controller stay in sync
                                       textEditingController.text = controller
                                           .controladorUnidadMedida
                                           .text;
+
                                       textEditingController.selection =
                                           TextSelection.fromPosition(
                                             TextPosition(
@@ -494,11 +532,13 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                                                   .length,
                                             ),
                                           );
+
                                       textEditingController.addListener(() {
                                         controller
                                                 .controladorUnidadMedida
                                                 .text =
                                             textEditingController.text;
+
                                         state.didChange(
                                           textEditingController.text,
                                         );
@@ -539,7 +579,9 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 12),
+
                 Row(
                   children: [
                     Expanded(
@@ -568,8 +610,11 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                   ],
                 ),
               ]),
+
               const SizedBox(height: 16),
+
               sectionTitle('Precio en Lps'),
+
               sectionCard([
                 Row(
                   children: [
@@ -603,38 +648,32 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                   ],
                 ),
               ]),
+
               const SizedBox(height: 24),
+
               Obx(
-                () => ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: appBarColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    textStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                  icon: const Icon(Icons.save),
-                  label: controller.estaGuardando.value
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+                () => SizedBox(
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    icon: controller.estaGuardando.value
+                        ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: colores.onPrimary,
+                            ),
+                          )
+                        : const Icon(Icons.save),
+                    label: controller.estaGuardando.value
+                        ? const Text('Guardando...')
+                        : const Text('Guardar producto'),
+                    onPressed: controller.estaGuardando.value
+                        ? null
+                        : () => controller.guardarProducto(
+                            productoId: widget.producto?.id,
                           ),
-                        )
-                      : const Text('Guardar producto'),
-                  onPressed: controller.estaGuardando.value
-                      ? null
-                      : () => controller.guardarProducto(
-                          productoId: widget.producto?.id,
-                        ),
+                  ),
                 ),
               ),
             ],
@@ -646,7 +685,7 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
 }
 
 class _MobileScannerPage extends StatefulWidget {
-  const _MobileScannerPage({Key? key}) : super(key: key);
+  const _MobileScannerPage();
 
   @override
   State<_MobileScannerPage> createState() => _MobileScannerPageState();
@@ -654,6 +693,7 @@ class _MobileScannerPage extends StatefulWidget {
 
 class _MobileScannerPageState extends State<_MobileScannerPage> {
   final MobileScannerController _cameraController = MobileScannerController();
+
   bool _detected = false;
 
   @override
@@ -670,11 +710,21 @@ class _MobileScannerPageState extends State<_MobileScannerPage> {
         controller: _cameraController,
         onDetect: (capture) {
           if (_detected) return;
-          if (capture.barcodes.isEmpty) return;
+
+          if (capture.barcodes.isEmpty) {
+            return;
+          }
+
           final barcode = capture.barcodes.first;
+
           final String? code = barcode.rawValue ?? barcode.displayValue;
-          if (code == null || code.isEmpty) return;
+
+          if (code == null || code.isEmpty) {
+            return;
+          }
+
           _detected = true;
+
           Navigator.of(context).pop(code);
         },
       ),

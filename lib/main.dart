@@ -7,6 +7,7 @@ import 'package:mi_inventario/view/dashboard_screen.dart';
 import 'package:mi_inventario/configuracion/perfil_usuario_screen.dart';
 import 'package:mi_inventario/Categorias/categoria_screen.dart'
     as categorias_screen;
+import 'package:mi_inventario/theme/app_theme.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -26,58 +27,20 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  static const Color colorPrincipal = Color.fromARGB(255, 28, 83, 170);
-
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
       title: 'Mi Inventario',
       debugShowCheckedModeBanner: false,
 
-      // TEMA CLARO
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.light,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: colorPrincipal,
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: const Color.fromARGB(255, 248, 244, 250),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: colorPrincipal,
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      ),
+      // Modo claro: Índigo Corporativo
+      theme: AppTheme.claro,
 
-      // TEMA OSCURO
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: colorPrincipal,
-          brightness: Brightness.dark,
-        ),
-        scaffoldBackgroundColor: const Color(0xFF121212),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: colorPrincipal,
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: const Color(0xFF242424),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      ),
+      // Modo oscuro: Nocturno Boutique
+      darkTheme: AppTheme.oscuro,
 
       // La aplicación inicia en modo claro.
-      // ConfiguracionScreen podrá cambiarlo usando Get.changeThemeMode().
+      // ConfiguracionScreen cambia el tema usando Get.changeThemeMode().
       themeMode: ThemeMode.light,
 
       home: const AuthGate(),
@@ -124,7 +87,6 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final email = authService.usuarioActual?.email ?? 'Usuario';
-
     final uid = authService.usuarioActual?.uid ?? 'default';
 
     return Scaffold(
@@ -154,16 +116,12 @@ class HomeScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(Icons.inventory_2_outlined, size: 72),
-
               const SizedBox(height: 16),
-
               Text(
                 'Sesión iniciada: $email',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
-
               const SizedBox(height: 32),
-
               ElevatedButton.icon(
                 onPressed: () {
                   Navigator.of(context).push(

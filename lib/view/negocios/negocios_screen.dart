@@ -7,8 +7,6 @@ import 'package:mi_inventario/view/negocios/negocio_form_screen.dart';
 class NegociosScreen extends StatelessWidget {
   const NegociosScreen({super.key});
 
-  static const Color _colorPrincipal = Color.fromARGB(255, 28, 83, 170);
-
   NegociosController _obtenerController() {
     if (Get.isRegistered<NegociosController>()) {
       return Get.find<NegociosController>();
@@ -35,6 +33,8 @@ class NegociosScreen extends StatelessWidget {
     NegociosController controller,
     NegocioModel negocio,
   ) async {
+    final colores = Theme.of(context).colorScheme;
+
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -53,8 +53,8 @@ class NegociosScreen extends StatelessWidget {
             ),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
+                backgroundColor: colores.error,
+                foregroundColor: colores.onError,
               ),
               onPressed: () {
                 Navigator.of(dialogContext).pop(true);
@@ -95,27 +95,11 @@ class NegociosScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = _obtenerController();
 
-    final esOscuro = Theme.of(context).brightness == Brightness.dark;
-
-    final colorFondo = esOscuro
-        ? const Color(0xFF121212)
-        : const Color.fromARGB(255, 248, 244, 250);
-
-    final colorTarjeta = esOscuro ? const Color(0xFF202020) : Colors.white;
-
-    final colorCampo = esOscuro ? const Color(0xFF242424) : Colors.white;
-
-    final colorTexto = esOscuro ? Colors.white : const Color(0xFF303030);
-
-    final colorSecundario = esOscuro ? Colors.white70 : Colors.black54;
-
-    final colorBorde = esOscuro ? Colors.white24 : Colors.grey.shade300;
+    final tema = Theme.of(context);
+    final colores = tema.colorScheme;
 
     return Scaffold(
-      backgroundColor: colorFondo,
       appBar: AppBar(
-        backgroundColor: _colorPrincipal,
-        foregroundColor: Colors.white,
         title: const Text(
           'Gestión de negocios',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -131,8 +115,6 @@ class NegociosScreen extends StatelessWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: _colorPrincipal,
-        foregroundColor: Colors.white,
         onPressed: () {
           _abrirFormulario(context, controller);
         },
@@ -145,28 +127,9 @@ class NegociosScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
               child: TextField(
                 onChanged: controller.buscarNegocio,
-                style: TextStyle(color: colorTexto),
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'Buscar negocio',
-                  hintStyle: TextStyle(color: colorSecundario),
-                  prefixIcon: Icon(Icons.search, color: colorSecundario),
-                  filled: true,
-                  fillColor: colorCampo,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: colorBorde),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: colorBorde),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                      color: _colorPrincipal,
-                      width: 2,
-                    ),
-                  ),
+                  prefixIcon: Icon(Icons.search),
                 ),
               ),
             ),
@@ -183,16 +146,16 @@ class NegociosScreen extends StatelessWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.error_outline,
                             size: 60,
-                            color: Colors.red,
+                            color: colores.error,
                           ),
                           const SizedBox(height: 12),
                           Text(
                             controller.mensajeError.value,
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: colorTexto),
+                            style: TextStyle(color: colores.onSurface),
                           ),
                         ],
                       ),
@@ -204,38 +167,43 @@ class NegociosScreen extends StatelessWidget {
 
                 if (negocios.isEmpty) {
                   return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.store_outlined,
-                          size: 70,
-                          color: esOscuro
-                              ? Colors.white38
-                              : Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          controller.textoBusqueda.value.isEmpty
-                              ? 'No hay negocios registrados'
-                              : 'No se encontraron negocios',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: colorSecundario,
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.store_outlined,
+                            size: 70,
+                            color: colores.onSurfaceVariant.withValues(
+                              alpha: 0.55,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          controller.textoBusqueda.value.isEmpty
-                              ? 'Presiona + para agregar uno'
-                              : 'Intenta con otra búsqueda',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: colorSecundario,
+                          const SizedBox(height: 14),
+                          Text(
+                            controller.textoBusqueda.value.isEmpty
+                                ? 'No hay negocios registrados'
+                                : 'No se encontraron negocios',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: colores.onSurfaceVariant,
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 6),
+                          Text(
+                            controller.textoBusqueda.value.isEmpty
+                                ? 'Presiona + para agregar uno'
+                                : 'Intenta con otra búsqueda',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: colores.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }
@@ -246,119 +214,103 @@ class NegociosScreen extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final negocio = negocios[index];
 
-                    return Container(
+                    return Card(
                       margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: colorTarjeta,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: colorBorde),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(
-                              alpha: esOscuro ? 0.20 : 0.08,
+                      clipBehavior: Clip.antiAlias,
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 42,
+                                  height: 42,
+                                  decoration: BoxDecoration(
+                                    color: colores.primaryContainer,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    Icons.store,
+                                    color: colores.primary,
+                                    size: 22,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    negocio.nombre,
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                      color: colores.onSurface,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.store,
-                                color: _colorPrincipal,
-                                size: 22,
-                              ),
-                              const SizedBox(width: 9),
-                              Expanded(
-                                child: Text(
-                                  negocio.nombre,
-                                  style: TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
-                                    color: colorTexto,
+                            const SizedBox(height: 12),
+                            Divider(height: 1, color: colores.outline),
+                            const SizedBox(height: 12),
+                            _datoNegocio(
+                              context: context,
+                              icono: Icons.location_on,
+                              titulo: 'Dirección',
+                              valor: negocio.direccion,
+                            ),
+                            const SizedBox(height: 8),
+                            _datoNegocio(
+                              context: context,
+                              icono: Icons.phone,
+                              titulo: 'Teléfono',
+                              valor: negocio.telefono,
+                            ),
+                            const SizedBox(height: 8),
+                            _datoNegocio(
+                              context: context,
+                              icono: Icons.email,
+                              titulo: 'Correo',
+                              valor: negocio.correo,
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      _abrirFormulario(
+                                        context,
+                                        controller,
+                                        negocio: negocio,
+                                      );
+                                    },
+                                    icon: const Icon(Icons.edit, size: 18),
+                                    label: const Text('Editar'),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Divider(height: 1, color: colorBorde),
-                          const SizedBox(height: 10),
-                          _datoNegocio(
-                            icono: Icons.location_on,
-                            titulo: 'Dirección',
-                            valor: negocio.direccion,
-                            colorTexto: colorTexto,
-                            colorSecundario: colorSecundario,
-                          ),
-                          const SizedBox(height: 8),
-                          _datoNegocio(
-                            icono: Icons.phone,
-                            titulo: 'Teléfono',
-                            valor: negocio.telefono,
-                            colorTexto: colorTexto,
-                            colorSecundario: colorSecundario,
-                          ),
-                          const SizedBox(height: 8),
-                          _datoNegocio(
-                            icono: Icons.email,
-                            titulo: 'Correo',
-                            valor: negocio.correo,
-                            colorTexto: colorTexto,
-                            colorSecundario: colorSecundario,
-                          ),
-                          const SizedBox(height: 14),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: _colorPrincipal,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(25),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: colores.error,
+                                      foregroundColor: colores.onError,
                                     ),
+                                    onPressed: () {
+                                      _confirmarEliminar(
+                                        context,
+                                        controller,
+                                        negocio,
+                                      );
+                                    },
+                                    icon: const Icon(Icons.delete, size: 18),
+                                    label: const Text('Eliminar'),
                                   ),
-                                  onPressed: () {
-                                    _abrirFormulario(
-                                      context,
-                                      controller,
-                                      negocio: negocio,
-                                    );
-                                  },
-                                  icon: const Icon(Icons.edit, size: 18),
-                                  label: const Text('Editar'),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(25),
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    _confirmarEliminar(
-                                      context,
-                                      controller,
-                                      negocio,
-                                    );
-                                  },
-                                  icon: const Icon(Icons.delete, size: 18),
-                                  label: const Text('Eliminar'),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -372,32 +324,33 @@ class NegociosScreen extends StatelessWidget {
   }
 
   Widget _datoNegocio({
+    required BuildContext context,
     required IconData icono,
     required String titulo,
     required String valor,
-    required Color colorTexto,
-    required Color colorSecundario,
   }) {
+    final colores = Theme.of(context).colorScheme;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icono, color: _colorPrincipal, size: 19),
+        Icon(icono, color: colores.primary, size: 19),
         const SizedBox(width: 8),
         Expanded(
           child: RichText(
             text: TextSpan(
-              style: TextStyle(fontSize: 13, color: colorTexto),
+              style: TextStyle(fontSize: 13, color: colores.onSurface),
               children: [
                 TextSpan(
                   text: '$titulo: ',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: colorSecundario,
+                    color: colores.onSurfaceVariant,
                   ),
                 ),
                 TextSpan(
                   text: valor.isEmpty ? 'Sin información' : valor,
-                  style: TextStyle(color: colorTexto),
+                  style: TextStyle(color: colores.onSurface),
                 ),
               ],
             ),

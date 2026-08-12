@@ -19,8 +19,10 @@ List<Map<String, dynamic>> filtrarProductosPorNombre(
   }
 
   final busqueda = texto.toLowerCase().trim();
+
   return productos.where((producto) {
     final nombre = (producto['nombreProducto'] ?? '').toString().toLowerCase();
+
     return nombre.contains(busqueda);
   }).toList();
 }
@@ -33,9 +35,8 @@ class InventarioScreen extends StatefulWidget {
 }
 
 class _InventarioScreenState extends State<InventarioScreen> {
-  static const Color _colorPrincipal = Color.fromARGB(255, 28, 83, 170);
-
   late final ProductosController _controller;
+
   final TextEditingController _busquedaController = TextEditingController();
 
   String _textoBusqueda = '';
@@ -47,6 +48,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
   @override
   void initState() {
     super.initState();
+
     if (Get.isRegistered<ProductosController>()) {
       _controller = Get.find<ProductosController>();
     } else {
@@ -62,6 +64,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> get _streamProductos {
     final uid = _uidActual;
+
     if (uid == null || uid.isEmpty) {
       return const Stream.empty();
     }
@@ -75,6 +78,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> get _streamCategorias {
     final uid = _uidActual;
+
     if (uid == null || uid.isEmpty) {
       return const Stream.empty();
     }
@@ -88,6 +92,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> get _streamNegocios {
     final uid = _uidActual;
+
     if (uid == null || uid.isEmpty) {
       return const Stream.empty();
     }
@@ -105,6 +110,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
   // distinto en tu proyecto, ajusta aquí.
   Stream<QuerySnapshot<Map<String, dynamic>>> get _streamBodegas {
     final uid = _uidActual;
+
     if (uid == null || uid.isEmpty) {
       return const Stream.empty();
     }
@@ -128,6 +134,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
       final codigo = await Navigator.of(context).push<String>(
         MaterialPageRoute(builder: (_) => const _InventarioScannerPage()),
       );
+
       if (codigo != null && codigo.isNotEmpty) {
         setState(() {
           _textoBusqueda = codigo;
@@ -136,6 +143,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
       }
     } catch (e) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error al escanear: $e')));
@@ -152,6 +160,8 @@ class _InventarioScreenState extends State<InventarioScreen> {
   }
 
   Future<void> _confirmarEliminacion(ProductosModel producto) async {
+    final colores = Theme.of(context).colorScheme;
+
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -165,7 +175,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              style: FilledButton.styleFrom(
+                backgroundColor: colores.error,
+                foregroundColor: colores.onError,
+              ),
               child: const Text('Eliminar'),
             ),
           ],
@@ -179,37 +192,53 @@ class _InventarioScreenState extends State<InventarioScreen> {
 
     try {
       await _controller.eliminarProducto(producto.id!);
+
       if (!mounted) {
         return;
       }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Producto eliminado correctamente'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: Text(
+            'Producto eliminado correctamente',
+            style: TextStyle(color: colores.onError),
+          ),
+          backgroundColor: colores.error,
         ),
       );
     } catch (error) {
       if (!mounted) {
         return;
       }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('No se pudo eliminar el producto: $error')),
       );
     }
   }
 
-  /// Formulario de "Registrar Entrada" / "Registrar Salida" estilo mockup,
-  /// con Cantidad, Bodega, Proveedor/Cliente (opcional), Fecha y Observaciones.
   Future<void> _abrirFormularioMovimiento(
     ProductosModel producto,
     String tipo,
   ) async {
     final esEntrada = tipo == 'Entrada';
-    final colorAccion = esEntrada ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
+
+    final coloresPantalla = Theme.of(context).colorScheme;
+
+    final colorAccion = esEntrada
+        ? coloresPantalla.tertiary
+        : coloresPantalla.error;
+
+    final colorTextoAccion = esEntrada
+        ? coloresPantalla.onTertiary
+        : coloresPantalla.onError;
 
     final cantidadController = TextEditingController();
-    final terceroController = TextEditingController(); // Proveedor o Cliente
+
+    final terceroController = TextEditingController();
+
     final observacionesController = TextEditingController();
+
     String? bodegaId;
     DateTime fecha = DateTime.now();
     bool guardando = false;
@@ -221,14 +250,19 @@ class _InventarioScreenState extends State<InventarioScreen> {
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
+            final colores = Theme.of(context).colorScheme;
+
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
               ),
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                decoration: BoxDecoration(
+                  color: colores.surface,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                  border: Border(top: BorderSide(color: colores.outline)),
                 ),
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                 child: SingleChildScrollView(
@@ -242,7 +276,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                           height: 4,
                           margin: const EdgeInsets.only(bottom: 16),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade300,
+                            color: colores.outlineVariant,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -258,7 +292,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                       const SizedBox(height: 4),
                       Text(
                         producto.nombreProducto,
-                        style: const TextStyle(color: Colors.black54),
+                        style: TextStyle(color: colores.onSurfaceVariant),
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -277,6 +311,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                         stream: _streamBodegas,
                         builder: (context, snapshot) {
                           final bodegasDocs = snapshot.data?.docs ?? [];
+
                           return DropdownButtonFormField<String>(
                             key: ValueKey('bodega-$bodegaId'),
                             initialValue: bodegaId,
@@ -286,9 +321,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
                             ),
                             isExpanded: true,
                             items: bodegasDocs.map((doc) {
-                              final nombre =
-                                  (doc.data()['nombre'] ?? '').toString();
-                              return DropdownMenuItem(
+                              final nombre = (doc.data()['nombre'] ?? '')
+                                  .toString();
+
+                              return DropdownMenuItem<String>(
                                 value: doc.id,
                                 child: Text(
                                   nombre.isEmpty ? 'Sin nombre' : nombre,
@@ -320,6 +356,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                             firstDate: DateTime(2020),
                             lastDate: DateTime(2100),
                           );
+
                           if (seleccionada != null) {
                             setSheetState(() => fecha = seleccionada);
                           }
@@ -356,8 +393,8 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                   ? null
                                   : () => Navigator.of(sheetContext).pop(),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.red,
-                                side: const BorderSide(color: Colors.red),
+                                foregroundColor: colores.error,
+                                side: BorderSide(color: colores.error),
                               ),
                               child: const Text('Cancelar'),
                             ),
@@ -371,63 +408,83 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                       final cantidad = double.tryParse(
                                         cantidadController.text.trim(),
                                       );
+
                                       if (cantidad == null || cantidad <= 0) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           const SnackBar(
                                             content: Text(
                                               'Ingresa una cantidad numérica mayor a 0',
                                             ),
                                           ),
                                         );
+
                                         return;
                                       }
 
                                       setSheetState(() => guardando = true);
+
                                       try {
                                         await _controller.registrarMovimiento(
                                           producto: producto,
                                           tipoMovimiento: tipo,
                                           cantidad: cantidad,
                                           bodegaId: bodegaId,
-                                          tercero: terceroController.text.trim(),
+                                          tercero: terceroController.text
+                                              .trim(),
                                           fecha: fecha,
-                                          observaciones:
-                                              observacionesController.text.trim(),
+                                          observaciones: observacionesController
+                                              .text
+                                              .trim(),
                                         );
 
                                         if (!sheetContext.mounted) {
                                           return;
                                         }
+
                                         Navigator.of(sheetContext).pop();
-                                        ScaffoldMessenger.of(context).showSnackBar(
+
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           SnackBar(
                                             content: Text(
                                               esEntrada
                                                   ? 'Entrada registrada'
                                                   : 'Salida registrada',
+                                              style: TextStyle(
+                                                color: colores.onTertiary,
+                                              ),
                                             ),
-                                            backgroundColor: Colors.green,
+                                            backgroundColor: colores.tertiary,
                                           ),
                                         );
                                       } catch (error) {
                                         setSheetState(() => guardando = false);
-                                        ScaffoldMessenger.of(context).showSnackBar(
+
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           SnackBar(
-                                            content: Text('No se pudo guardar: $error'),
+                                            content: Text(
+                                              'No se pudo guardar: $error',
+                                            ),
                                           ),
                                         );
                                       }
                                     },
                               style: FilledButton.styleFrom(
-                                backgroundColor: Colors.green,
+                                backgroundColor: colorAccion,
+                                foregroundColor: colorTextoAccion,
                               ),
                               child: guardando
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       width: 16,
                                       height: 16,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        color: Colors.white,
+                                        color: colorTextoAccion,
                                       ),
                                     )
                                   : const Text('Registrar'),
@@ -457,6 +514,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
   ) async {
     final nombreCategoria =
         categoriasPorId[producto.idCategoria] ?? 'Sin categoría';
+
     final nombreNegocio = negociosPorId[producto.idNegocio] ?? 'Sin negocio';
 
     await showModalBottomSheet<void>(
@@ -470,10 +528,15 @@ class _InventarioScreenState extends State<InventarioScreen> {
           maxChildSize: 0.9,
           expand: false,
           builder: (context, scrollController) {
+            final colores = Theme.of(context).colorScheme;
+
             return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              decoration: BoxDecoration(
+                color: colores.surface,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+                border: Border(top: BorderSide(color: colores.outline)),
               ),
               child: Column(
                 children: [
@@ -483,7 +546,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
+                        color: colores.outlineVariant,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -491,9 +554,9 @@ class _InventarioScreenState extends State<InventarioScreen> {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       border: Border(
-                        bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                        bottom: BorderSide(color: colores.outline),
                       ),
                     ),
                     child: Row(
@@ -503,10 +566,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
                         Expanded(
                           child: Text(
                             producto.nombreProducto,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: _colorPrincipal,
+                              color: colores.primary,
                             ),
                           ),
                         ),
@@ -523,10 +586,19 @@ class _InventarioScreenState extends State<InventarioScreen> {
                           _info('Código', producto.codigoProducto),
                           _info('Categoría', nombreCategoria),
                           _info('Negocio', nombreNegocio),
-                          _info('Stock actual', producto.stockActual.toStringAsFixed(2)),
+                          _info(
+                            'Stock actual',
+                            producto.stockActual.toStringAsFixed(2),
+                          ),
                           _info('Unidad', producto.unidadMedida),
-                          _info('Precio compra', producto.precioCompra.toStringAsFixed(2)),
-                          _info('Precio venta', producto.precioVenta.toStringAsFixed(2)),
+                          _info(
+                            'Precio compra',
+                            producto.precioCompra.toStringAsFixed(2),
+                          ),
+                          _info(
+                            'Precio venta',
+                            producto.precioVenta.toStringAsFixed(2),
+                          ),
                           _info('Descripción', producto.descripcion),
                         ],
                       ),
@@ -540,11 +612,13 @@ class _InventarioScreenState extends State<InventarioScreen> {
                           width: double.infinity,
                           child: FilledButton.icon(
                             style: FilledButton.styleFrom(
-                              backgroundColor: _colorPrincipal,
+                              backgroundColor: colores.primary,
+                              foregroundColor: colores.onPrimary,
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
                             onPressed: () {
                               Navigator.of(sheetContext).pop();
+
                               _abrirFormularioEdicion(producto);
                             },
                             icon: const Icon(Icons.edit, size: 18),
@@ -556,11 +630,13 @@ class _InventarioScreenState extends State<InventarioScreen> {
                           children: [
                             Expanded(
                               child: TextButton.icon(
-                                onPressed: () => Navigator.of(sheetContext).pop(),
+                                onPressed: () {
+                                  Navigator.of(sheetContext).pop();
+                                },
                                 icon: const Icon(Icons.close, size: 18),
                                 label: const Text('Cerrar'),
                                 style: TextButton.styleFrom(
-                                  foregroundColor: Colors.black54,
+                                  foregroundColor: colores.onSurfaceVariant,
                                 ),
                               ),
                             ),
@@ -568,11 +644,17 @@ class _InventarioScreenState extends State<InventarioScreen> {
                               child: TextButton.icon(
                                 onPressed: () {
                                   Navigator.of(sheetContext).pop();
+
                                   _confirmarEliminacion(producto);
                                 },
-                                icon: const Icon(Icons.delete_outline, size: 18),
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  size: 18,
+                                ),
                                 label: const Text('Eliminar'),
-                                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: colores.error,
+                                ),
                               ),
                             ),
                           ],
@@ -594,7 +676,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: Colors.black87, fontSize: 14),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontSize: 14,
+          ),
           children: [
             TextSpan(
               text: '$etiqueta: ',
@@ -608,21 +693,23 @@ class _InventarioScreenState extends State<InventarioScreen> {
   }
 
   Widget _buildFotoProducto(String fotoUrl) {
+    final colores = Theme.of(context).colorScheme;
+
     if (fotoUrl.trim().isEmpty) {
-      return const CircleAvatar(
+      return CircleAvatar(
         radius: 24,
-        backgroundColor: Color(0xFFE2E8F0),
-        child: Icon(Icons.image_not_supported, color: Colors.grey),
+        backgroundColor: colores.surfaceContainerHighest,
+        child: Icon(Icons.image_not_supported, color: colores.onSurfaceVariant),
       );
     }
 
     return CircleAvatar(
       radius: 24,
-      backgroundColor: const Color(0xFFE2E8F0),
+      backgroundColor: colores.surfaceContainerHighest,
       backgroundImage: NetworkImage(fotoUrl),
       onBackgroundImageError: (_, __) {},
       child: fotoUrl.isEmpty
-          ? const Icon(Icons.broken_image, color: Colors.grey)
+          ? Icon(Icons.broken_image, color: colores.onSurfaceVariant)
           : null,
     );
   }
@@ -654,12 +741,15 @@ class _InventarioScreenState extends State<InventarioScreen> {
       final coincideCodigo = producto.codigoProducto.toLowerCase().contains(
         busqueda,
       );
+
       final coincideCodigoBarra = (producto.codigoBarra ?? '')
           .toLowerCase()
           .contains(busqueda);
+
       final coincideNombre = producto.nombreProducto.toLowerCase().contains(
         busqueda,
       );
+
       final coincideCategoria = categoriaNombre.contains(busqueda);
 
       return coincideCodigo ||
@@ -674,18 +764,18 @@ class _InventarioScreenState extends State<InventarioScreen> {
       _textoBusqueda = '';
       _filtroCategoriaId = '';
       _filtroNegocioId = '';
+
       _busquedaController.clear();
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final colores = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 248, 244, 250),
       appBar: AppBar(
         title: const Text('Consulta del Inventario'),
-        backgroundColor: _colorPrincipal,
-        foregroundColor: Colors.white,
         actions: [
           IconButton(
             tooltip: 'Agregar producto',
@@ -704,6 +794,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
           }
 
           final categoriasDocs = categoriasSnapshot.data?.docs ?? [];
+
           final categoriasPorId = <String, String>{
             for (final categoria in categoriasDocs)
               categoria.id: (categoria.data()['nombre'] ?? '').toString(),
@@ -719,15 +810,18 @@ class _InventarioScreenState extends State<InventarioScreen> {
               }
 
               final negociosDocs = negociosSnapshot.data?.docs ?? [];
+
               final negociosPorId = <String, String>{
                 for (final negocio in negociosDocs)
                   negocio.id: (negocio.data()['nombre'] ?? '').toString(),
               };
+
               final categoriasVisibles = _filtroNegocioId.isEmpty
                   ? categoriasDocs
                   : categoriasDocs.where((doc) {
                       final negocioIdCategoria = (doc.data()['negocioId'] ?? '')
                           .toString();
+
                       return negocioIdCategoria == _filtroNegocioId;
                     }).toList();
 
@@ -739,6 +833,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                   if (!mounted) {
                     return;
                   }
+
                   setState(() => _filtroCategoriaId = '');
                 });
               }
@@ -785,7 +880,6 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                 labelText:
                                     'Buscar por código, nombre, categoría o código de barra',
                                 prefixIcon: const Icon(Icons.search),
-                                border: const OutlineInputBorder(),
                                 suffixIcon: _textoBusqueda.isEmpty
                                     ? IconButton(
                                         onPressed: _escanearYBuscar,
@@ -814,14 +908,14 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                         : _filtroCategoriaId,
                                     decoration: const InputDecoration(
                                       labelText: 'Filtrar categoría',
-                                      border: OutlineInputBorder(),
                                     ),
                                     isExpanded: true,
                                     items: categoriasVisibles.map((doc) {
                                       final nombre =
                                           (doc.data()['nombre'] ?? '')
                                               .toString();
-                                      return DropdownMenuItem(
+
+                                      return DropdownMenuItem<String>(
                                         value: doc.id,
                                         child: Text(
                                           nombre.isEmpty
@@ -846,14 +940,14 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                         : _filtroNegocioId,
                                     decoration: const InputDecoration(
                                       labelText: 'Filtrar negocio',
-                                      border: OutlineInputBorder(),
                                     ),
                                     isExpanded: true,
                                     items: negociosDocs.map((doc) {
                                       final nombre =
                                           (doc.data()['nombre'] ?? '')
                                               .toString();
-                                      return DropdownMenuItem(
+
+                                      return DropdownMenuItem<String>(
                                         value: doc.id,
                                         child: Text(
                                           nombre.isEmpty
@@ -899,12 +993,14 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                 itemCount: productosFiltrados.length,
                                 itemBuilder: (context, index) {
                                   final producto = productosFiltrados[index];
+
                                   final nombreCategoria =
                                       categoriasPorId[producto.idCategoria] ??
                                       'Sin categoría';
 
                                   return Card(
                                     margin: const EdgeInsets.only(bottom: 10),
+                                    clipBehavior: Clip.antiAlias,
                                     child: InkWell(
                                       onDoubleTap: () =>
                                           _mostrarDetalleProducto(
@@ -912,7 +1008,6 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                             categoriasPorId,
                                             negociosPorId,
                                           ),
-                                      borderRadius: BorderRadius.circular(12),
                                       child: Padding(
                                         padding: const EdgeInsets.all(12),
                                         child: Row(
@@ -946,33 +1041,40 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                             ),
                                             _AccionProducto(
                                               icono: Icons.edit_outlined,
-                                              color: _colorPrincipal,
+                                              color: colores.primary,
                                               etiqueta: 'Modificar',
                                               relleno: false,
                                               onTap: () =>
-                                                  _abrirFormularioEdicion(producto),
+                                                  _abrirFormularioEdicion(
+                                                    producto,
+                                                  ),
                                             ),
                                             const SizedBox(width: 6),
                                             _AccionProducto(
                                               icono: Icons.add,
-                                              color: const Color(0xFF2E7D32),
+                                              color: colores.tertiary,
+                                              colorContenido:
+                                                  colores.onTertiary,
                                               etiqueta: 'Ingreso',
                                               relleno: true,
-                                              onTap: () => _abrirFormularioMovimiento(
-                                                producto,
-                                                'Entrada',
-                                              ),
+                                              onTap: () =>
+                                                  _abrirFormularioMovimiento(
+                                                    producto,
+                                                    'Entrada',
+                                                  ),
                                             ),
                                             const SizedBox(width: 6),
                                             _AccionProducto(
                                               icono: Icons.remove,
-                                              color: const Color(0xFFC62828),
+                                              color: colores.error,
+                                              colorContenido: colores.onError,
                                               etiqueta: 'Salida',
                                               relleno: true,
-                                              onTap: () => _abrirFormularioMovimiento(
-                                                producto,
-                                                'Salida',
-                                              ),
+                                              onTap: () =>
+                                                  _abrirFormularioMovimiento(
+                                                    producto,
+                                                    'Salida',
+                                                  ),
                                             ),
                                           ],
                                         ),
@@ -992,16 +1094,12 @@ class _InventarioScreenState extends State<InventarioScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _abrirFormularioRegistro,
-        backgroundColor: _colorPrincipal,
-        foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
     );
   }
 }
 
-/// Botón circular con etiqueta debajo, usado para las acciones rápidas
-/// (Modificar / Ingreso / Salida) de cada tarjeta de producto.
 class _AccionProducto extends StatelessWidget {
   const _AccionProducto({
     required this.icono,
@@ -1009,12 +1107,14 @@ class _AccionProducto extends StatelessWidget {
     required this.etiqueta,
     required this.onTap,
     this.relleno = true,
+    this.colorContenido,
   });
 
   final IconData icono;
   final Color color;
   final String etiqueta;
   final bool relleno;
+  final Color? colorContenido;
   final VoidCallback onTap;
 
   @override
@@ -1037,22 +1137,19 @@ class _AccionProducto extends StatelessWidget {
             child: Icon(
               icono,
               size: 18,
-              color: relleno ? Colors.white : color,
+              color: relleno ? (colorContenido ?? color) : color,
             ),
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          etiqueta,
-          style: TextStyle(fontSize: 10, color: color),
-        ),
+        Text(etiqueta, style: TextStyle(fontSize: 10, color: color)),
       ],
     );
   }
 }
 
 class _InventarioScannerPage extends StatefulWidget {
-  const _InventarioScannerPage({Key? key}) : super(key: key);
+  const _InventarioScannerPage();
 
   @override
   State<_InventarioScannerPage> createState() => _InventarioScannerPageState();
@@ -1060,6 +1157,7 @@ class _InventarioScannerPage extends StatefulWidget {
 
 class _InventarioScannerPageState extends State<_InventarioScannerPage> {
   final MobileScannerController _cameraController = MobileScannerController();
+
   bool _detected = false;
 
   @override
@@ -1076,11 +1174,21 @@ class _InventarioScannerPageState extends State<_InventarioScannerPage> {
         controller: _cameraController,
         onDetect: (capture) {
           if (_detected) return;
-          if (capture.barcodes.isEmpty) return;
+
+          if (capture.barcodes.isEmpty) {
+            return;
+          }
+
           final barcode = capture.barcodes.first;
+
           final String? code = barcode.rawValue ?? barcode.displayValue;
-          if (code == null || code.isEmpty) return;
+
+          if (code == null || code.isEmpty) {
+            return;
+          }
+
           _detected = true;
+
           Navigator.of(context).pop(code);
         },
       ),
