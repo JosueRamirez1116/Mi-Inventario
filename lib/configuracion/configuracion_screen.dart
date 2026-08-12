@@ -69,10 +69,8 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
             ],
           ),
           content: const Text(
-            'Al continuar, tu usuario será marcado como eliminado '
-            'en la base de datos con estado 0 y tu cuenta será '
-            'eliminada de Firebase Authentication.\n\n'
-            'Tus datos permanecerán registrados en Firestore.\n\n'
+            'Al continuar, tu cuenta será eliminada y ya no podrás acceder a ella.\n\n'
+            'Esta acción no se puede deshacer.\n\n'
             '¿Deseas continuar?',
           ),
           actions: [
