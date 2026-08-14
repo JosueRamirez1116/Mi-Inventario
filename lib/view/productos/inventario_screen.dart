@@ -855,6 +855,9 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                         : _filtroNegocioId,
                                     decoration: const InputDecoration(
                                       labelText: 'Filtrar negocio',
+                                      prefixIcon: Icon(
+                                        Icons.storefront_outlined,
+                                      ),
                                     ),
                                     isExpanded: true,
                                     items: negociosDocs.map((doc) {
@@ -891,6 +894,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                         : _filtroCategoriaId,
                                     decoration: const InputDecoration(
                                       labelText: 'Filtrar categoría',
+                                      prefixIcon: Icon(Icons.category_outlined),
                                     ),
                                     isExpanded: true,
                                     items: categoriasVisibles.map((doc) {
