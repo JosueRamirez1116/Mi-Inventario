@@ -279,54 +279,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Card(
-                margin: EdgeInsets.zero,
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 55,
-                        height: 55,
-                        decoration: BoxDecoration(
-                          color: colores.primaryContainer,
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: Icon(
-                          Icons.settings,
-                          color: colores.primary,
-                          size: 32,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Mi configuración',
-                              style: tema.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: colores.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Administra tu cuenta y preferencias',
-                              style: tema.textTheme.bodyMedium?.copyWith(
-                                color: colores.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 26),
-
+              
               _tituloSeccion(context, 'CUENTA'),
 
               const SizedBox(height: 10),
