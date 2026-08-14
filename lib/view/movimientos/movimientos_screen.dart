@@ -15,6 +15,13 @@ class MovimientosScreen extends StatefulWidget {
 class _MovimientosScreenState extends State<MovimientosScreen> {
   late final MovimientosController _controller;
 
+  // El controlador del diálogo de edición pertenece a la pantalla: showDialog
+  // completa su Future al llamar a pop(), antes de que termine la animación de
+  // cierre, así que liberarlo ahí dejaría al campo del diálogo usando un
+  // controlador ya desechado durante esa animación.
+  final TextEditingController _cantidadEdicionController =
+      TextEditingController();
+
   DateTime? _fechaInicio;
   DateTime? _fechaFin;
 
@@ -61,6 +68,12 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
     } else {
       _controller = Get.put(MovimientosController());
     }
+  }
+
+  @override
+  void dispose() {
+    _cantidadEdicionController.dispose();
+    super.dispose();
   }
 
   Future<void> _seleccionarFechaInicio() async {
@@ -155,9 +168,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
   Future<void> _mostrarDialogoEdicion(MovimientoModel movimiento) async {
     String tipoSeleccionado = movimiento.tipoMovimiento;
 
-    final cantidadController = TextEditingController(
-      text: movimiento.cantidad.toString(),
-    );
+    _cantidadEdicionController.text = movimiento.cantidad.toString();
 
     bool guardando = false;
 
@@ -198,7 +209,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
-                    controller: cantidadController,
+                    controller: _cantidadEdicionController,
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
@@ -220,7 +231,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                       ? null
                       : () async {
                           final nuevaCantidad = double.tryParse(
-                            cantidadController.text.trim(),
+                            _cantidadEdicionController.text.trim(),
                           );
 
                           if (nuevaCantidad == null || nuevaCantidad <= 0) {
@@ -292,8 +303,6 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
         );
       },
     );
-
-    cantidadController.dispose();
   }
 
   Future<void> _confirmarEliminacion(MovimientoModel movimiento) async {
@@ -499,6 +508,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                                     : _filtroNegocioId,
                                 decoration: const InputDecoration(
                                   labelText: 'Negocio',
+                                  prefixIcon: Icon(Icons.storefront_outlined),
                                 ),
                                 isExpanded: true,
                                 items: negociosDocs.map((doc) {
@@ -509,6 +519,9 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                                     value: doc.id,
                                     child: Text(
                                       nombre.isEmpty ? 'Sin nombre' : nombre,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      softWrap: false,
                                     ),
                                   );
                                 }).toList(),
@@ -532,6 +545,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                                     : _filtroCategoriaId,
                                 decoration: const InputDecoration(
                                   labelText: 'Categoría',
+                                  prefixIcon: Icon(Icons.category_outlined),
                                 ),
                                 isExpanded: true,
                                 items: categoriasVisibles.map((doc) {
@@ -542,6 +556,9 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                                     value: doc.id,
                                     child: Text(
                                       nombre.isEmpty ? 'Sin categoría' : nombre,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      softWrap: false,
                                     ),
                                   );
                                 }).toList(),
@@ -621,11 +638,14 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                                         _mostrarDialogoEdicion(movimiento);
                                       },
                                       child: CircleAvatar(
-                                        backgroundColor:
-                                            colores.surfaceContainerHighest,
+                                        backgroundColor: colorTipo.withValues(
+                                          alpha: 0.15,
+                                        ),
                                         child: Icon(
-                                          Icons.image,
-                                          color: colores.onSurfaceVariant,
+                                          esEntrada
+                                              ? Icons.arrow_downward
+                                              : Icons.arrow_upward,
+                                          color: colorTipo,
                                         ),
                                       ),
                                     ),

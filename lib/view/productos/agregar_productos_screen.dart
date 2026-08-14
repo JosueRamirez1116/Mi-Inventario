@@ -269,7 +269,9 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                     initialValue: controller.idNegocioSeleccionado.value.isEmpty
                         ? null
                         : controller.idNegocioSeleccionado.value,
-                    decoration: inputDecoration(labelText: 'Negocio'),
+                    decoration: inputDecoration(labelText: 'Negocio').copyWith(
+                      prefixIcon: const Icon(Icons.storefront_outlined),
+                    ),
                     items: controller.negociosUsuario.map((negocio) {
                       return DropdownMenuItem<String>(
                         value: negocio['id'],
@@ -295,7 +297,9 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                         controller.idCategoriaSeleccionada.value.isEmpty
                         ? null
                         : controller.idCategoriaSeleccionada.value,
-                    decoration: inputDecoration(labelText: 'Categoría'),
+                    decoration: inputDecoration(
+                      labelText: 'Categoría',
+                    ).copyWith(prefixIcon: const Icon(Icons.category_outlined)),
                     items: controller.categoriasNegocio.map((categoria) {
                       return DropdownMenuItem<String>(
                         value: categoria['id'],

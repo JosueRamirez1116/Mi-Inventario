@@ -18,6 +18,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final _passwordController = TextEditingController();
 
+  // El controlador del diálogo de restablecer contraseña pertenece a la
+  // pantalla: showDialog completa su Future al llamar a pop(), antes de que
+  // termine la animación de cierre, así que liberarlo ahí dejaría al campo del
+  // diálogo usando un controlador ya desechado durante esa animación.
+  final _correoRestablecerController = TextEditingController();
+
   final AuthService _authService = AuthService();
 
   bool _cargando = false;
@@ -94,9 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _mostrarDialogoRestablecer() async {
-    final controladorCorreo = TextEditingController(
-      text: _emailController.text.trim(),
-    );
+    _correoRestablecerController.text = _emailController.text.trim();
 
     final formKeyDialogo = GlobalKey<FormState>();
 
@@ -124,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
               content: Form(
                 key: formKeyDialogo,
                 child: TextFormField(
-                  controller: controladorCorreo,
+                  controller: _correoRestablecerController,
                   autofocus: true,
                   keyboardType: TextInputType.emailAddress,
                   style: TextStyle(color: colores.onSurface),
@@ -200,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           try {
                             await _authService.restablecerContrasena(
-                              controladorCorreo.text.trim(),
+                              _correoRestablecerController.text.trim(),
                             );
 
                             if (dialogContext.mounted) {
@@ -264,14 +268,13 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       },
     );
-
-    controladorCorreo.dispose();
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _correoRestablecerController.dispose();
 
     super.dispose();
   }
