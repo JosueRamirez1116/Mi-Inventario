@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:get/get.dart';
 import 'package:mi_inventario/auth/services/auth_service.dart';
 import 'package:mi_inventario/login/login_screen.dart';
@@ -11,7 +12,11 @@ import 'package:mi_inventario/theme/app_theme.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final binding = WidgetsFlutterBinding.ensureInitialized();
+
+  // Mantiene el splash nativo visible mientras se inicializa Firebase y se
+  // resuelve la sesión. Lo retira AuthGate al pintar la primera pantalla real.
+  FlutterNativeSplash.preserve(widgetsBinding: binding);
 
   try {
     await Firebase.initializeApp(
@@ -58,6 +63,29 @@ class AuthGate extends StatefulWidget {
 class _AuthGateState extends State<AuthGate> {
   final AuthService _auth = AuthService();
 
+  bool _splashRetirado = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Red de seguridad: si Firebase falla al inicializar, authStateChanges
+    // podría no emitir nunca y el splash se quedaría pegado en pantalla.
+    Future.delayed(const Duration(seconds: 5), _retirarSplash);
+  }
+
+  /// Retira el splash nativo una sola vez, después de que el frame actual ya
+  /// se pintó, para que no se vea un parpadeo entre el splash y la pantalla.
+  void _retirarSplash() {
+    if (_splashRetirado) {
+      return;
+    }
+
+    _splashRetirado = true;
+
+    FlutterNativeSplash.remove();
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
@@ -68,6 +96,8 @@ class _AuthGateState extends State<AuthGate> {
             body: Center(child: CircularProgressIndicator()),
           );
         }
+
+        WidgetsBinding.instance.addPostFrameCallback((_) => _retirarSplash());
 
         if (snapshot.hasData) {
           return DashboardScreen(authService: _auth);
