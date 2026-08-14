@@ -269,7 +269,9 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                     initialValue: controller.idNegocioSeleccionado.value.isEmpty
                         ? null
                         : controller.idNegocioSeleccionado.value,
-                    decoration: inputDecoration(labelText: 'Negocio'),
+                    decoration: inputDecoration(labelText: 'Negocio').copyWith(
+                      prefixIcon: const Icon(Icons.storefront_outlined),
+                    ),
                     items: controller.negociosUsuario.map((negocio) {
                       return DropdownMenuItem<String>(
                         value: negocio['id'],
@@ -295,7 +297,9 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                         controller.idCategoriaSeleccionada.value.isEmpty
                         ? null
                         : controller.idCategoriaSeleccionada.value,
-                    decoration: inputDecoration(labelText: 'Categoría'),
+                    decoration: inputDecoration(
+                      labelText: 'Categoría',
+                    ).copyWith(prefixIcon: const Icon(Icons.category_outlined)),
                     items: controller.categoriasNegocio.map((categoria) {
                       return DropdownMenuItem<String>(
                         value: categoria['id'],
@@ -371,11 +375,12 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                   } else {
                     contenidoFoto = Icon(
                       Icons.add_a_photo_outlined,
-                      color: colores.onSurfaceVariant,
+                      color: colores.primary,
                     );
                   }
 
                   return Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
@@ -390,18 +395,22 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Text(
-                              'Foto del producto (opcional)',
+                              'Foto del producto',
                               style: fieldTextStyle,
+                              textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 8),
                             OutlinedButton.icon(
                               onPressed: controller.subiendoImagen.value
                                   ? null
                                   : _mostrarSelectorFoto,
-                              icon: const Icon(Icons.camera_alt_outlined),
+                              icon: Icon(
+                                Icons.camera_alt_outlined,
+                                color: colores.primary,
+                              ),
                               label: Text(
                                 tieneFoto ? 'Cambiar foto' : 'Agregar foto',
                               ),
@@ -419,10 +428,9 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                   controller: controller.controladorCodigoProducto,
                   style: fieldTextStyle,
                   readOnly: true,
-                  decoration: inputDecoration(labelText: 'Código de producto')
-                      .copyWith(
-                        helperText: 'Se asigna automáticamente (5 dígitos)',
-                      ),
+                  decoration: inputDecoration(
+                    labelText: 'Código de producto',
+                  ).copyWith(helperText: 'Se asigna automáticamente'),
                 ),
 
                 const SizedBox(height: 12),
@@ -430,10 +438,8 @@ class _AgregarProductosScreenState extends State<AgregarProductosScreen> {
                 TextFormField(
                   controller: controller.controladorCodigoBarra,
                   style: fieldTextStyle,
-                  decoration:
-                      inputDecoration(
-                        labelText: 'Código de barra (opcional)',
-                      ).copyWith(
+                  decoration: inputDecoration(labelText: 'Código de barra')
+                      .copyWith(
                         suffixIcon: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [

@@ -39,6 +39,16 @@ class _InventarioScreenState extends State<InventarioScreen> {
 
   final TextEditingController _busquedaController = TextEditingController();
 
+  // Los controladores del formulario de movimientos pertenecen a la pantalla:
+  // showModalBottomSheet completa su Future al llamar a pop(), antes de que
+  // termine la animación de cierre, así que liberarlos ahí dejaría a los campos
+  // del sheet usando controladores ya desechados durante esa animación.
+  final TextEditingController _cantidadMovimientoController =
+      TextEditingController();
+
+  final TextEditingController _observacionesMovimientoController =
+      TextEditingController();
+
   String _textoBusqueda = '';
   String _filtroCategoriaId = '';
   String _filtroNegocioId = '';
@@ -59,6 +69,8 @@ class _InventarioScreenState extends State<InventarioScreen> {
   @override
   void dispose() {
     _busquedaController.dispose();
+    _cantidadMovimientoController.dispose();
+    _observacionesMovimientoController.dispose();
     super.dispose();
   }
 
@@ -99,24 +111,6 @@ class _InventarioScreenState extends State<InventarioScreen> {
 
     return FirebaseFirestore.instance
         .collection('negocios')
-        .where('usuarioId', isEqualTo: uid)
-        .where('estado', isEqualTo: 1)
-        .snapshots();
-  }
-
-  // NOTA: asume que existe (o existirá) una colección 'bodegas' en Firestore
-  // con al menos los campos 'nombre', 'usuarioId' y 'estado', igual que
-  // categorias/negocios. Si el nombre de la colección o de los campos es
-  // distinto en tu proyecto, ajusta aquí.
-  Stream<QuerySnapshot<Map<String, dynamic>>> get _streamBodegas {
-    final uid = _uidActual;
-
-    if (uid == null || uid.isEmpty) {
-      return const Stream.empty();
-    }
-
-    return FirebaseFirestore.instance
-        .collection('bodegas')
         .where('usuarioId', isEqualTo: uid)
         .where('estado', isEqualTo: 1)
         .snapshots();
@@ -233,13 +227,9 @@ class _InventarioScreenState extends State<InventarioScreen> {
         ? coloresPantalla.onTertiary
         : coloresPantalla.onError;
 
-    final cantidadController = TextEditingController();
+    _cantidadMovimientoController.clear();
+    _observacionesMovimientoController.clear();
 
-    final terceroController = TextEditingController();
-
-    final observacionesController = TextEditingController();
-
-    String? bodegaId;
     DateTime fecha = DateTime.now();
     bool guardando = false;
 
@@ -296,7 +286,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
-                        controller: cantidadController,
+                        controller: _cantidadMovimientoController,
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
@@ -304,47 +294,6 @@ class _InventarioScreenState extends State<InventarioScreen> {
                           labelText: 'Cantidad',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.numbers),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                        stream: _streamBodegas,
-                        builder: (context, snapshot) {
-                          final bodegasDocs = snapshot.data?.docs ?? [];
-
-                          return DropdownButtonFormField<String>(
-                            key: ValueKey('bodega-$bodegaId'),
-                            initialValue: bodegaId,
-                            decoration: const InputDecoration(
-                              labelText: 'Seleccione una bodega',
-                              border: OutlineInputBorder(),
-                            ),
-                            isExpanded: true,
-                            items: bodegasDocs.map((doc) {
-                              final nombre = (doc.data()['nombre'] ?? '')
-                                  .toString();
-
-                              return DropdownMenuItem<String>(
-                                value: doc.id,
-                                child: Text(
-                                  nombre.isEmpty ? 'Sin nombre' : nombre,
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setSheetState(() => bodegaId = value);
-                            },
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                      TextFormField(
-                        controller: terceroController,
-                        decoration: InputDecoration(
-                          labelText: esEntrada
-                              ? 'Proveedor (opcional)'
-                              : 'Cliente (opcional)',
-                          border: const OutlineInputBorder(),
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -376,7 +325,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                       ),
                       const SizedBox(height: 14),
                       TextFormField(
-                        controller: observacionesController,
+                        controller: _observacionesMovimientoController,
                         maxLines: 3,
                         decoration: const InputDecoration(
                           labelText: 'Observaciones',
@@ -406,7 +355,8 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                   ? null
                                   : () async {
                                       final cantidad = double.tryParse(
-                                        cantidadController.text.trim(),
+                                        _cantidadMovimientoController.text
+                                            .trim(),
                                       );
 
                                       if (cantidad == null || cantidad <= 0) {
@@ -430,13 +380,11 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                           producto: producto,
                                           tipoMovimiento: tipo,
                                           cantidad: cantidad,
-                                          bodegaId: bodegaId,
-                                          tercero: terceroController.text
-                                              .trim(),
                                           fecha: fecha,
-                                          observaciones: observacionesController
-                                              .text
-                                              .trim(),
+                                          observaciones:
+                                              _observacionesMovimientoController
+                                                  .text
+                                                  .trim(),
                                         );
 
                                         if (!sheetContext.mounted) {
@@ -501,10 +449,6 @@ class _InventarioScreenState extends State<InventarioScreen> {
         );
       },
     );
-
-    cantidadController.dispose();
-    terceroController.dispose();
-    observacionesController.dispose();
   }
 
   Future<void> _mostrarDetalleProducto(
@@ -775,7 +719,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Consulta del Inventario'),
+        title: const Text('Inventario'),
         actions: [
           IconButton(
             tooltip: 'Agregar producto',
@@ -883,7 +827,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                 suffixIcon: _textoBusqueda.isEmpty
                                     ? IconButton(
                                         onPressed: _escanearYBuscar,
-                                        icon: const Icon(Icons.qr_code_scanner),
+                                        icon: Icon(
+                                          Icons.qr_code_scanner,
+                                          color: colores.primary,
+                                        ),
                                         tooltip: 'Escanear código',
                                       )
                                     : IconButton(
@@ -902,44 +849,15 @@ class _InventarioScreenState extends State<InventarioScreen> {
                               children: [
                                 Expanded(
                                   child: DropdownButtonFormField<String>(
-                                    key: ValueKey('cat-$_filtroCategoriaId'),
-                                    initialValue: _filtroCategoriaId.isEmpty
-                                        ? null
-                                        : _filtroCategoriaId,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Filtrar categoría',
-                                    ),
-                                    isExpanded: true,
-                                    items: categoriasVisibles.map((doc) {
-                                      final nombre =
-                                          (doc.data()['nombre'] ?? '')
-                                              .toString();
-
-                                      return DropdownMenuItem<String>(
-                                        value: doc.id,
-                                        child: Text(
-                                          nombre.isEmpty
-                                              ? 'Sin nombre'
-                                              : nombre,
-                                        ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (value) {
-                                      setState(
-                                        () => _filtroCategoriaId = value ?? '',
-                                      );
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
                                     key: ValueKey('neg-$_filtroNegocioId'),
                                     initialValue: _filtroNegocioId.isEmpty
                                         ? null
                                         : _filtroNegocioId,
                                     decoration: const InputDecoration(
                                       labelText: 'Filtrar negocio',
+                                      prefixIcon: Icon(
+                                        Icons.storefront_outlined,
+                                      ),
                                     ),
                                     isExpanded: true,
                                     items: negociosDocs.map((doc) {
@@ -953,6 +871,9 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                           nombre.isEmpty
                                               ? 'Sin nombre'
                                               : nombre,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          softWrap: false,
                                         ),
                                       );
                                     }).toList(),
@@ -964,6 +885,42 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                     },
                                   ),
                                 ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    key: ValueKey('cat-$_filtroCategoriaId'),
+                                    initialValue: _filtroCategoriaId.isEmpty
+                                        ? null
+                                        : _filtroCategoriaId,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Filtrar categoría',
+                                      prefixIcon: Icon(Icons.category_outlined),
+                                    ),
+                                    isExpanded: true,
+                                    items: categoriasVisibles.map((doc) {
+                                      final nombre =
+                                          (doc.data()['nombre'] ?? '')
+                                              .toString();
+
+                                      return DropdownMenuItem<String>(
+                                        value: doc.id,
+                                        child: Text(
+                                          nombre.isEmpty
+                                              ? 'Sin nombre'
+                                              : nombre,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          softWrap: false,
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) {
+                                      setState(
+                                        () => _filtroCategoriaId = value ?? '',
+                                      );
+                                    },
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 10),
@@ -972,7 +929,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                               child: OutlinedButton.icon(
                                 onPressed: _limpiarFiltros,
                                 icon: const Icon(Icons.filter_alt_off),
-                                label: const Text('Eliminar todos los filtros'),
+                                label: const Text('Eliminar filtros'),
                               ),
                             ),
                           ],

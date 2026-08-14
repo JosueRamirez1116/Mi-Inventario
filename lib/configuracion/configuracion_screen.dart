@@ -14,8 +14,20 @@ class ConfiguracionScreen extends StatefulWidget {
 class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
   final AuthService _authService = AuthService();
 
+  // El controlador del diálogo de confirmar contraseña pertenece a la pantalla:
+  // showDialog completa su Future al llamar a pop(), antes de que termine la
+  // animación de cierre, así que liberarlo ahí dejaría al campo del diálogo
+  // usando un controlador ya desechado durante esa animación.
+  final TextEditingController _contrasenaController = TextEditingController();
+
   bool _modoOscuro = Get.isDarkMode;
   bool _eliminando = false;
+
+  @override
+  void dispose() {
+    _contrasenaController.dispose();
+    super.dispose();
+  }
 
   void _cambiarModoOscuro(bool valor) {
     setState(() {
@@ -152,7 +164,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
   }
 
   Future<void> _pedirContrasena() async {
-    final contrasenaController = TextEditingController();
+    _contrasenaController.clear();
 
     bool procesando = false;
 
@@ -177,7 +189,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                   ),
                   const SizedBox(height: 18),
                   TextField(
-                    controller: contrasenaController,
+                    controller: _contrasenaController,
                     obscureText: true,
                     decoration: const InputDecoration(
                       labelText: 'Contraseña actual',
@@ -199,7 +211,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                   onPressed: procesando
                       ? null
                       : () async {
-                          final contrasena = contrasenaController.text.trim();
+                          final contrasena = _contrasenaController.text.trim();
 
                           if (contrasena.isEmpty) {
                             ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -254,8 +266,6 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
       },
     );
 
-    contrasenaController.dispose();
-
     if (reautenticado == true) {
       await _eliminarCuenta();
     }
@@ -279,7 +289,6 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              
               _tituloSeccion(context, 'CUENTA'),
 
               const SizedBox(height: 10),
