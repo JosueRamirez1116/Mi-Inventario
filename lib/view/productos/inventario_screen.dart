@@ -775,7 +775,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Consulta del Inventario'),
+        title: const Text('Inventario'),
         actions: [
           IconButton(
             tooltip: 'Agregar producto',
@@ -883,7 +883,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                 suffixIcon: _textoBusqueda.isEmpty
                                     ? IconButton(
                                         onPressed: _escanearYBuscar,
-                                        icon: const Icon(Icons.qr_code_scanner),
+                                        icon: Icon(
+                                          Icons.qr_code_scanner,
+                                          color: colores.primary,
+                                        ),
                                         tooltip: 'Escanear código',
                                       )
                                     : IconButton(
@@ -900,38 +903,6 @@ class _InventarioScreenState extends State<InventarioScreen> {
                             const SizedBox(height: 10),
                             Row(
                               children: [
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    key: ValueKey('cat-$_filtroCategoriaId'),
-                                    initialValue: _filtroCategoriaId.isEmpty
-                                        ? null
-                                        : _filtroCategoriaId,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Filtrar categoría',
-                                    ),
-                                    isExpanded: true,
-                                    items: categoriasVisibles.map((doc) {
-                                      final nombre =
-                                          (doc.data()['nombre'] ?? '')
-                                              .toString();
-
-                                      return DropdownMenuItem<String>(
-                                        value: doc.id,
-                                        child: Text(
-                                          nombre.isEmpty
-                                              ? 'Sin nombre'
-                                              : nombre,
-                                        ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (value) {
-                                      setState(
-                                        () => _filtroCategoriaId = value ?? '',
-                                      );
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
                                 Expanded(
                                   child: DropdownButtonFormField<String>(
                                     key: ValueKey('neg-$_filtroNegocioId'),
@@ -964,6 +935,38 @@ class _InventarioScreenState extends State<InventarioScreen> {
                                     },
                                   ),
                                 ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    key: ValueKey('cat-$_filtroCategoriaId'),
+                                    initialValue: _filtroCategoriaId.isEmpty
+                                        ? null
+                                        : _filtroCategoriaId,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Filtrar categoría',
+                                    ),
+                                    isExpanded: true,
+                                    items: categoriasVisibles.map((doc) {
+                                      final nombre =
+                                          (doc.data()['nombre'] ?? '')
+                                              .toString();
+
+                                      return DropdownMenuItem<String>(
+                                        value: doc.id,
+                                        child: Text(
+                                          nombre.isEmpty
+                                              ? 'Sin nombre'
+                                              : nombre,
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) {
+                                      setState(
+                                        () => _filtroCategoriaId = value ?? '',
+                                      );
+                                    },
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 10),
@@ -972,7 +975,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                               child: OutlinedButton.icon(
                                 onPressed: _limpiarFiltros,
                                 icon: const Icon(Icons.filter_alt_off),
-                                label: const Text('Eliminar todos los filtros'),
+                                label: const Text('Eliminar filtros'),
                               ),
                             ),
                           ],
