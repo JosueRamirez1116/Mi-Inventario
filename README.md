@@ -4,8 +4,6 @@ Aplicación móvil desarrollada en **Flutter** para la gestión de inventario de
 
 > Proyecto Final — Programación Móvil II
 
-📄 Para una explicación técnica completa, con detalle de cada clase/método y un diagrama de arquitectura, consulta **[Documentacion-Mi-Inventario.pdf](./Documentacion-Mi-Inventario.pdf)**.
-
 ## ✨ Funcionalidades
 
 - **Autenticación**: registro e inicio de sesión con email/contraseña, restablecimiento de contraseña, eliminación de cuenta.
@@ -18,16 +16,16 @@ Aplicación móvil desarrollada en **Flutter** para la gestión de inventario de
 
 ## 🛠️ Stack tecnológico
 
-| Área | Tecnología |
-|---|---|
-| Framework | Flutter (Dart) |
-| Manejo de estado / DI | [GetX](https://pub.dev/packages/get) |
-| Autenticación | Firebase Authentication |
-| Base de datos | Cloud Firestore |
-| Almacenamiento de archivos | Firebase Storage |
-| Escaneo de códigos | mobile_scanner |
-| Selección de imágenes | image_picker |
-| Reportes | pdf, excel, path_provider, open_filex |
+| Área                      | Tecnología                           |
+| -------------------------- | ------------------------------------- |
+| Framework                  | Flutter (Dart)                        |
+| Manejo de estado / DI      | [GetX](https://pub.dev/packages/get)   |
+| Autenticación             | Firebase Authentication               |
+| Base de datos              | Cloud Firestore                       |
+| Almacenamiento de archivos | Firebase Storage                      |
+| Escaneo de códigos        | mobile_scanner                        |
+| Selección de imágenes    | image_picker                          |
+| Reportes                   | pdf, excel, path_provider, open_filex |
 
 ## 🏗️ Arquitectura
 
@@ -82,17 +80,5 @@ flutter test
 
 Incluye pruebas de modelos (`negocio_model_test.dart`, `productos_model_test.dart`) y de la pantalla de inventario.
 
-## 📄 Documentación técnica
-
-El archivo [`Documentacion-Mi-Inventario.pdf`](./Documentacion-Mi-Inventario.pdf) en la raíz del proyecto contiene:
-
-- Explicación de la arquitectura y el flujo de datos.
-- Diagrama visual de módulos y backend (Firebase).
-- Detalle de cada modelo de datos y sus campos.
-- Explicación método por método de controllers, servicios y pantallas.
-- Mapa de navegación entre pantallas.
-- Observaciones técnicas y puntos de mejora detectados.
-
----
 
 *Proyecto desarrollado como trabajo final del curso de Programación Móvil II.*
