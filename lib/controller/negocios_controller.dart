@@ -18,6 +18,8 @@ class NegociosController extends GetxController {
   final RxString mensajeError = ''.obs;
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _suscripcion;
+  StreamSubscription<User?>? _suscripcionAuth;
+  String? _uidEscuchado;
 
   StreamSubscription<User?>? _suscripcionAuth;
 
@@ -35,26 +37,27 @@ class NegociosController extends GetxController {
 
     escucharNegocios();
 
-    _suscripcionAuth = _auth.authStateChanges().listen((usuario) {
-      final nuevoUid = usuario?.uid;
-
-      if (nuevoUid != _uidEnEscucha) {
-        _uidEnEscucha = nuevoUid;
-
-        escucharNegocios();
-      }
+    // Si cambia el usuario autenticado (logout/login sin reiniciar la app),
+    // este controlador es un singleton y debe volver a suscribirse con el
+    // nuevo uid; de lo contrario seguiría mostrando los negocios del
+    // usuario anterior.
+    _suscripcionAuth = _auth.authStateChanges().listen((_) {
+      escucharNegocios();
     });
   }
 
   void escucharNegocios() {
+    final uid = _auth.currentUser?.uid;
+
+    if (uid == _uidEscuchado && _suscripcion != null) {
+      return;
+    }
+
     cargando.value = true;
     mensajeError.value = '';
 
     _suscripcion?.cancel();
-
-    negocios.clear();
-
-    final uid = _auth.currentUser?.uid;
+    _uidEscuchado = uid;
 
     if (uid == null) {
       cargando.value = false;
@@ -230,7 +233,6 @@ class NegociosController extends GetxController {
   void onClose() {
     _suscripcion?.cancel();
     _suscripcionAuth?.cancel();
-
     super.onClose();
   }
 }
