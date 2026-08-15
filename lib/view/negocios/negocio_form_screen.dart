@@ -219,7 +219,7 @@ class _NegocioFormScreenState extends State<NegocioFormScreen> {
           padding: const EdgeInsets.all(18),
           child: Form(
             key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
+            autovalidateMode: AutovalidateMode.disabled,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -267,9 +267,7 @@ class _NegocioFormScreenState extends State<NegocioFormScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
                 Text(
                   'INFORMACIÓN DEL NEGOCIO',
                   style: TextStyle(
@@ -279,9 +277,7 @@ class _NegocioFormScreenState extends State<NegocioFormScreen> {
                     letterSpacing: 0.6,
                   ),
                 ),
-
                 const SizedBox(height: 10),
-
                 Card(
                   margin: EdgeInsets.zero,
                   child: Padding(
@@ -298,9 +294,7 @@ class _NegocioFormScreenState extends State<NegocioFormScreen> {
                             icono: Icons.store,
                           ),
                         ),
-
                         const SizedBox(height: 16),
-
                         TextFormField(
                           controller: _direccionController,
                           validator: _validarDireccion,
@@ -312,9 +306,7 @@ class _NegocioFormScreenState extends State<NegocioFormScreen> {
                             icono: Icons.location_on,
                           ),
                         ),
-
                         const SizedBox(height: 16),
-
                         TextFormField(
                           controller: _telefonoController,
                           validator: _validarTelefono,
@@ -329,9 +321,7 @@ class _NegocioFormScreenState extends State<NegocioFormScreen> {
                             icono: Icons.phone,
                           ),
                         ),
-
                         const SizedBox(height: 16),
-
                         TextFormField(
                           controller: _correoController,
                           validator: _validarCorreo,
@@ -346,9 +336,7 @@ class _NegocioFormScreenState extends State<NegocioFormScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 22),
-
                 SizedBox(
                   height: 52,
                   child: ElevatedButton.icon(

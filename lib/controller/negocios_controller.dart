@@ -8,6 +8,7 @@ import 'package:mi_inventario/model/negocio_model.dart';
 
 class NegociosController extends GetxController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   final RxList<NegocioModel> negocios = <NegocioModel>[].obs;
@@ -20,6 +21,10 @@ class NegociosController extends GetxController {
   StreamSubscription<User?>? _suscripcionAuth;
   String? _uidEscuchado;
 
+  StreamSubscription<User?>? _suscripcionAuth;
+
+  String? _uidEnEscucha;
+
   CollectionReference<Map<String, dynamic>> get _coleccionNegocios {
     return _firestore.collection('negocios');
   }
@@ -27,6 +32,9 @@ class NegociosController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
+    _uidEnEscucha = _auth.currentUser?.uid;
+
     escucharNegocios();
 
     // Si cambia el usuario autenticado (logout/login sin reiniciar la app),
@@ -54,36 +62,42 @@ class NegociosController extends GetxController {
     if (uid == null) {
       cargando.value = false;
       mensajeError.value = 'No hay un usuario autenticado';
-      negocios.clear();
       return;
     }
+
+    _uidEnEscucha = uid;
 
     _suscripcion = _coleccionNegocios
         .where('usuarioId', isEqualTo: uid)
         .snapshots()
         .listen(
-      (snapshot) {
-        final lista = snapshot.docs.map((documento) {
-          return NegocioModel.fromMap(documento.id, documento.data());
-        }).toList();
+          (snapshot) {
+            final lista = snapshot.docs.map((documento) {
+              return NegocioModel.fromMap(documento.id, documento.data());
+            }).toList();
 
-        lista.sort(
-          (a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()),
+            lista.sort(
+              (a, b) =>
+                  a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()),
+            );
+
+            negocios.assignAll(lista);
+
+            cargando.value = false;
+            mensajeError.value = '';
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            cargando.value = false;
+
+            mensajeError.value = 'No se pudieron cargar los negocios';
+
+            negocios.clear();
+
+            debugPrint('Error al cargar negocios: $error');
+
+            debugPrintStack(stackTrace: stackTrace);
+          },
         );
-
-        negocios.assignAll(lista);
-        cargando.value = false;
-        mensajeError.value = '';
-      },
-      onError: (Object error, StackTrace stackTrace) {
-        cargando.value = false;
-        mensajeError.value = 'No se pudieron cargar los negocios';
-
-        debugPrint('Error al cargar negocios: $error');
-
-        debugPrintStack(stackTrace: stackTrace);
-      },
-    );
   }
 
   List<NegocioModel> get negociosFiltrados {
@@ -109,6 +123,7 @@ class NegociosController extends GetxController {
 
   Future<void> agregarNegocio(NegocioModel negocio) async {
     final uid = _auth.currentUser?.uid;
+
     if (uid == null) {
       throw FirebaseAuthException(
         code: 'missing-uid',
@@ -131,9 +146,39 @@ class NegociosController extends GetxController {
     String id,
     NegocioModel negocioActualizado,
   ) async {
-    final uid = negocioActualizado.usuarioId.isNotEmpty
-        ? negocioActualizado.usuarioId
-        : _auth.currentUser?.uid ?? '';
+    final uid = _auth.currentUser?.uid;
+
+    if (uid == null) {
+      throw FirebaseAuthException(
+        code: 'missing-uid',
+        message: 'No hay un usuario autenticado.',
+      );
+    }
+
+    final referencia = _coleccionNegocios.doc(id);
+
+    final documento = await referencia.get();
+
+    if (!documento.exists) {
+      throw FirebaseException(
+        plugin: 'cloud_firestore',
+        code: 'not-found',
+        message: 'El negocio no existe.',
+      );
+    }
+
+    final datosActuales = documento.data();
+
+    final propietario =
+        (datosActuales?['usuarioId'] ?? datosActuales?['uid'] ?? '').toString();
+
+    if (propietario != uid) {
+      throw FirebaseException(
+        plugin: 'cloud_firestore',
+        code: 'permission-denied',
+        message: 'No tienes permiso para modificar este negocio.',
+      );
+    }
 
     final datos = <String, dynamic>{
       ...negocioActualizado.toMap(),
@@ -141,11 +186,44 @@ class NegociosController extends GetxController {
       'fechaActualizacion': FieldValue.serverTimestamp(),
     };
 
-    await _coleccionNegocios.doc(id).update(datos);
+    await referencia.update(datos);
   }
 
   Future<void> eliminarNegocio(String id) async {
-    await _coleccionNegocios.doc(id).update({
+    final uid = _auth.currentUser?.uid;
+
+    if (uid == null) {
+      throw FirebaseAuthException(
+        code: 'missing-uid',
+        message: 'No hay un usuario autenticado.',
+      );
+    }
+
+    final referencia = _coleccionNegocios.doc(id);
+
+    final documento = await referencia.get();
+
+    if (!documento.exists) {
+      throw FirebaseException(
+        plugin: 'cloud_firestore',
+        code: 'not-found',
+        message: 'El negocio no existe.',
+      );
+    }
+
+    final datos = documento.data();
+
+    final propietario = (datos?['usuarioId'] ?? datos?['uid'] ?? '').toString();
+
+    if (propietario != uid) {
+      throw FirebaseException(
+        plugin: 'cloud_firestore',
+        code: 'permission-denied',
+        message: 'No tienes permiso para eliminar este negocio.',
+      );
+    }
+
+    await referencia.update({
       'estado': 0,
       'fechaActualizacion': FieldValue.serverTimestamp(),
     });
