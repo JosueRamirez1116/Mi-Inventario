@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:mi_inventario/controller/productos_controller.dart';
+import 'package:mi_inventario/controller/negocios_controller.dart';
 
 class AuthService {
   FirebaseAuth? _auth;
@@ -154,6 +155,9 @@ class AuthService {
     if (Get.isRegistered<ProductosController>()) {
       Get.delete<ProductosController>();
     }
+    if (Get.isRegistered<NegociosController>()) {
+      Get.delete<NegociosController>();
+    }
   }
 
   Future<void> restablecerContrasena(String email) {
@@ -234,6 +238,8 @@ class AuthService {
     }
 
     await _dbInstance.collection('negocios').doc(uid).set({
+      'uid': uid,
+      'usuarioId': uid,
       'nombreNegocio': nombreNegocio.trim(),
       'direccion': direccion.trim(),
       'telefono': telefono.trim(),
@@ -252,6 +258,7 @@ class AuthService {
     }
 
     await _dbInstance.collection('negocios').doc(uid).set({
+      'usuarioId': uid,
       'estado': 0,
       'eliminadoEn': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));

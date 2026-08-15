@@ -9,6 +9,24 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == userId;
     }
 
+    // Colecciones con documentos de ID libre (negocios, categorias,
+    // productos, movimientos) identifican al dueño con el campo
+    // 'usuarioId' en vez del ID del documento.
+    function esPropietarioDelDocumento() {
+      return signedIn() && request.auth.uid == resource.data.usuarioId;
+    }
+
+    function creaComoPropietario() {
+      return signedIn() && request.auth.uid == request.resource.data.usuarioId;
+    }
+
+    // En actualizaciones, además de ser el dueño actual, no se permite
+    // reasignar el documento a otro usuario.
+    function actualizaSinCambiarDueno() {
+      return esPropietarioDelDocumento()
+        && request.resource.data.usuarioId == resource.data.usuarioId;
+    }
+
     match /usuarios/{userId} {
       allow create: if isOwner(userId)
         && request.resource.data.uid == request.auth.uid;
@@ -16,19 +34,28 @@ service cloud.firestore {
       allow read, update, delete: if isOwner(userId);
     }
 
-    match /negocios/{userId} {
-      allow create: if isOwner(userId)
-        && request.resource.data.uid == request.auth.uid;
-
-      allow read, update, delete: if isOwner(userId);
+    match /negocios/{negocioId} {
+      allow create: if creaComoPropietario();
+      allow read, delete: if esPropietarioDelDocumento();
+      allow update: if actualizaSinCambiarDueno();
     }
 
     match /categorias/{categoriaId} {
-      allow create: if signedIn()
-        && request.resource.data.negocioId == request.auth.uid;
+      allow create: if creaComoPropietario();
+      allow read, delete: if esPropietarioDelDocumento();
+      allow update: if actualizaSinCambiarDueno();
+    }
 
-      allow read, update, delete: if signedIn()
-        && resource.data.negocioId == request.auth.uid;
+    match /productos/{productoId} {
+      allow create: if creaComoPropietario();
+      allow read, delete: if esPropietarioDelDocumento();
+      allow update: if actualizaSinCambiarDueno();
+    }
+
+    match /movimientos/{movimientoId} {
+      allow create: if creaComoPropietario();
+      allow read, delete: if esPropietarioDelDocumento();
+      allow update: if actualizaSinCambiarDueno();
     }
   }
 }

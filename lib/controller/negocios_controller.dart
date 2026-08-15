@@ -17,6 +17,8 @@ class NegociosController extends GetxController {
   final RxString mensajeError = ''.obs;
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _suscripcion;
+  StreamSubscription<User?>? _suscripcionAuth;
+  String? _uidEscuchado;
 
   CollectionReference<Map<String, dynamic>> get _coleccionNegocios {
     return _firestore.collection('negocios');
@@ -26,15 +28,29 @@ class NegociosController extends GetxController {
   void onInit() {
     super.onInit();
     escucharNegocios();
+
+    // Si cambia el usuario autenticado (logout/login sin reiniciar la app),
+    // este controlador es un singleton y debe volver a suscribirse con el
+    // nuevo uid; de lo contrario seguiría mostrando los negocios del
+    // usuario anterior.
+    _suscripcionAuth = _auth.authStateChanges().listen((_) {
+      escucharNegocios();
+    });
   }
 
   void escucharNegocios() {
+    final uid = _auth.currentUser?.uid;
+
+    if (uid == _uidEscuchado && _suscripcion != null) {
+      return;
+    }
+
     cargando.value = true;
     mensajeError.value = '';
 
     _suscripcion?.cancel();
+    _uidEscuchado = uid;
 
-    final uid = _auth.currentUser?.uid;
     if (uid == null) {
       cargando.value = false;
       mensajeError.value = 'No hay un usuario autenticado';
@@ -138,6 +154,7 @@ class NegociosController extends GetxController {
   @override
   void onClose() {
     _suscripcion?.cancel();
+    _suscripcionAuth?.cancel();
     super.onClose();
   }
 }
